@@ -78,3 +78,4 @@ venv.bak/
 
 takeout-downloads/
 experiments/whoosh-index/
+experiments/query.history

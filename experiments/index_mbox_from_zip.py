@@ -25,47 +25,6 @@ schema = Schema(
     msg_key=ID(stored=True, unique=True)
 )
 
-def run_repl(ix):
-    print("\nWhoosh Email Index REPL. Type your search query, or 'exit' to quit.")
-    qp = QueryParser("body", schema=ix.schema)
-    with ix.searcher() as searcher:
-        while True:
-            try:
-                query_str = input("search> ").strip()
-            except (EOFError, KeyboardInterrupt):
-                print("\nExiting REPL.")
-                break
-            if query_str.lower() in ("exit", "quit", ":q"):
-                print("Exiting REPL.")
-                break
-            if not query_str:
-                continue
-            try:
-                q = qp.parse(query_str)
-            except Exception as e:
-                print(f"Query error: {e}")
-                continue
-            results = searcher.search(q, limit=None)
-            if not results:
-                print("No results found.")
-                continue
-            page_size = 10
-            total = len(results)
-            page = 0
-            while True:
-                start = page * page_size
-                end = min(start + page_size, total)
-                for i, hit in enumerate(results[start:end], start=start+1):
-                    print(f"[{i}/{total}] {hit['date']} | {hit['subject'][:60]}")
-                    print(f"    From: {hit['sender']} | To: {hit['recipients']}")
-                    print(f"    {hit.highlights('body', top=2)}\n")
-                if end >= total:
-                    break
-                inp = input(f"-- More ({end}/{total}) -- Press Enter for next page, 'q' to quit: ")
-                if inp.strip().lower() == 'q':
-                    break
-                page += 1
-
 def extract_and_index(zip_path, schema, index_dir):
     with zipfile.ZipFile(zip_path, 'r') as z:
         mbox_files = [f for f in z.namelist() if f.endswith('.mbox')]
@@ -100,12 +59,22 @@ def extract_and_index(zip_path, schema, index_dir):
                     for part in msg.walk():
                         if part.get_content_type() == 'text/plain':
                             try:
-                                body += part.get_payload(decode=True).decode(part.get_content_charset() or 'utf-8', errors='replace')
+                                payload = part.get_payload(decode=True)
+                                if isinstance(payload, bytes):
+                                    body += payload.decode(part.get_content_charset() or 'utf-8', errors='replace')
+                                elif isinstance(payload, str):
+                                    body += payload
                             except Exception:
                                 continue
                 else:
                     try:
-                        body = msg.get_payload(decode=True).decode(msg.get_content_charset() or 'utf-8', errors='replace')
+                        payload = msg.get_payload(decode=True)
+                        if isinstance(payload, bytes):
+                            body = payload.decode(msg.get_content_charset() or 'utf-8', errors='replace')
+                        elif isinstance(payload, str):
+                            body = payload
+                        else:
+                            body = ''
                     except Exception:
                         body = ''
                 writer.add_document(

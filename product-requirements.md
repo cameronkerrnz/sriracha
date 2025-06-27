@@ -43,7 +43,7 @@ The application is a GUI desktop application using the QT framework, and the bul
 
 - read email messages from an mbox file in a zip file (Google Takeout for Gmail)
 - populate a Whoosh index with a suitable email-related schema from each email message
-- determine if the index can be maintained entirely in memory
+- get the MBOX message for a result found in the search
 - no UI at this stage
 
 ### Milestone 2

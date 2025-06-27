@@ -3,6 +3,12 @@ import readline
 from whoosh.qparser import QueryParser
 from whoosh.index import open_dir
 
+HISTFILE = os.path.join(os.path.dirname(__file__), "query.history")
+try:
+    readline.read_history_file(HISTFILE)
+except FileNotFoundError:
+    pass
+
 def run_repl(ix):
     help_text = '''\nWhoosh Email Index REPL Help
 Type your search query, or 'exit' to quit. You can search on:
@@ -57,6 +63,7 @@ Type 'help' to see this message again.
                 for i, hit in enumerate(results[start:end], start=start+1):
                     print(f"[{i}/{total}] {hit['date']} | {hit['subject'][:60]}")
                     print(f"    From: {hit['sender']} | To: {hit['recipients']}")
+                    print(f"    Key: {hit['msg_key']}")
                     print(f"    {hit.highlights('body', top=2)}\n")
                 if end >= total:
                     break
@@ -64,6 +71,10 @@ Type 'help' to see this message again.
                 if inp.strip().lower() == 'q':
                     break
                 page += 1
+    try:
+        readline.write_history_file(HISTFILE)
+    except Exception:
+        pass
 
 def main():
     index_dir = os.path.join(os.path.dirname(__file__), "whoosh-index")
