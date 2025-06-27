@@ -77,3 +77,4 @@ venv.bak/
 .DS_Store
 
 takeout-downloads/
+experiments/whoosh-index/
