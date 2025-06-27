@@ -41,7 +41,7 @@ The application is a GUI desktop application using the QT framework, and the bul
 
 ### Milestone 1
 
-- read email messages from an mbox file in a zip file (Google Takeout for Gmail)
+- read email messages from a decompressed mbox file (Google Takeout for Gmail)
 - populate a Whoosh index with a suitable email-related schema from each email message
 - get the MBOX message for a result found in the search
 - no UI at this stage

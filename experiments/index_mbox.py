@@ -4,11 +4,7 @@ from whoosh.fields import Schema, TEXT, ID, DATETIME
 from whoosh.index import create_in
 from whoosh.analysis import StemmingAnalyzer
 from email.utils import parsedate_to_datetime
-import tempfile
-from math import ceil
 from tqdm import tqdm
-import readline
-from whoosh.qparser import QueryParser
 
 # Whoosh schema for email indexing
 schema = Schema(
