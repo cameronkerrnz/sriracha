@@ -64,6 +64,7 @@ Type 'help' to see this message again.
                     print(f"[{i}/{total}] {hit['date']} | {hit['subject'][:60]}")
                     print(f"    From: {hit['sender']} | To: {hit['recipients']}")
                     print(f"    Key: {hit['msg_key']}")
+                    print(f"    MBOX Message Extents: {hit['mbox_message_extents']}")
                     print(f"    {hit.highlights('body', top=2)}\n")
                 if end >= total:
                     break

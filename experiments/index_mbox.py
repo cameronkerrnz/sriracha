@@ -1,6 +1,6 @@
 import mailbox
 import os
-from whoosh.fields import Schema, TEXT, ID, DATETIME
+from whoosh.fields import Schema, TEXT, ID, DATETIME, STORED
 from whoosh.index import create_in
 from whoosh.analysis import StemmingAnalyzer
 from email.utils import parsedate_to_datetime
@@ -14,7 +14,8 @@ schema = Schema(
     date=DATETIME(stored=True),
     body=TEXT(stored=True, analyzer=StemmingAnalyzer()),
     mbox_file=ID(stored=True),
-    msg_key=ID(stored=True, unique=True)
+    msg_key=ID(stored=True, unique=True),
+    mbox_message_extents=STORED()
 )
 
 def extract_and_index(mbox_path, schema, index_dir):
@@ -32,6 +33,7 @@ def extract_and_index(mbox_path, schema, index_dir):
         return
     print(f"  {total} messages to index...")
     for i, (key, msg) in enumerate(tqdm(mbox.iteritems(), total=total, desc=f"Indexing {os.path.basename(mbox_path)}", unit="msg")):
+        mbox_message_extents = mbox._lookup(key) # Calculate offset to start of message
         subject = msg.get('subject', '')
         sender = msg.get('from', '')
         recipients = msg.get('to', '')
@@ -70,7 +72,8 @@ def extract_and_index(mbox_path, schema, index_dir):
             date=date_parsed,
             body=body,
             mbox_file=os.path.basename(mbox_path),
-            msg_key=f"{os.path.basename(mbox_path)}:{key}"
+            msg_key=f"{os.path.basename(mbox_path)}:{key}",
+            mbox_message_extents=mbox_message_extents
         )
     writer.commit()
     print(f"Indexing complete. Index is stored in: {index_dir}")
