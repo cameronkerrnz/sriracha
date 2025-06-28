@@ -3,6 +3,29 @@ import wx
 import os
 import threading
 from pubsub import pub  # Use pypubsub instead
+from collections.abc import MutableSet
+from typing import Any, Iterable, Iterator, Optional, Set, List
+
+class OrderedSet(MutableSet):
+    def __init__(self, iterable: Optional[Iterable[Any]] = None):
+        self._dict = dict()
+        if iterable:
+            for value in iterable:
+                self._dict[value] = None
+    def __contains__(self, value: Any) -> bool:
+        return value in self._dict
+    def __iter__(self) -> Iterator[Any]:
+        return iter(self._dict.keys())
+    def __len__(self) -> int:
+        return len(self._dict)
+    def add(self, value: Any) -> None:
+        self._dict[value] = None
+    def discard(self, value: Any) -> None:
+        self._dict.pop(value, None)
+    def __repr__(self) -> str:
+        return f"OrderedSet({list(self._dict.keys())})"
+    def to_list(self) -> List[Any]:
+        return list(self._dict.keys())
 
 class IndexThread(threading.Thread):
     def __init__(self, mbox_path, callback):
@@ -19,13 +42,89 @@ class IndexThread(threading.Thread):
             time.sleep(delay)
         wx.CallAfter(lambda: self.callback(None))
 
+class Message:
+    """
+    Represents a single email message, including metadata and app-specific fields.
+    """
+    def __init__(self, subject: str, sender: str, recipients: list[str], date: str, body: str, tags: Optional[Iterable[str]] = None, marked: bool = False, attachments: Optional[list[Any]] = None, msg_id: Any = None):
+        self.subject: str = subject
+        self.sender: str = sender
+        self.recipients: list[str] = recipients
+        self.date: str = date
+        self.body: str = body
+        self.tags: Set[str] = set(tags) if tags else set()
+        self.marked: bool = marked
+        self.attachments: list[Any] = attachments or []
+        self.msg_id: Any = msg_id
+    def add_tag(self, tag: str) -> None:
+        self.tags.add(tag)
+    def remove_tag(self, tag: str) -> None:
+        self.tags.discard(tag)
+    def toggle_marked(self) -> None:
+        self.marked = not self.marked
+    def __repr__(self) -> str:
+        return f"<Message subject={self.subject!r} sender={self.sender!r} date={self.date!r} tags={sorted(self.tags)} marked={self.marked}>"
+
+class MessageCollection:
+    """
+    Container for Message objects, with helper methods for filtering, searching, etc.
+    Maintains an ordered set of all tags present in the collection.
+    """
+    def __init__(self, messages: Optional[Iterable[Message]] = None, tags: Optional[Iterable[str]] = None):
+        self.messages: list[Message] = list(messages) if messages else []
+        # Aggregate tags from messages if not provided
+        if tags is not None:
+            self.tags = OrderedSet(tags)
+        else:
+            tag_set = OrderedSet()
+            for msg in self.messages:
+                for tag in msg.tags:
+                    tag_set.add(tag)
+            self.tags = tag_set
+    def add(self, message: Message) -> None:
+        self.messages.append(message)
+        for tag in message.tags:
+            self.tags.add(tag)
+    def get_marked(self) -> list[Message]:
+        return [msg for msg in self.messages if msg.marked]
+    def filter_by_tags(self, tags: Iterable[str]) -> 'MessageCollection':
+        tag_set = set(tags)
+        filtered = [msg for msg in self.messages if msg.tags & tag_set]
+        # Only include tags present in filtered messages
+        filtered_tags = OrderedSet()
+        for msg in filtered:
+            for tag in msg.tags:
+                filtered_tags.add(tag)
+        return MessageCollection(filtered, tags=filtered_tags)
+    def __getitem__(self, idx: int) -> Message:
+        return self.messages[idx]
+    def __len__(self) -> int:
+        return len(self.messages)
+    def __iter__(self) -> Iterator[Message]:
+        return iter(self.messages)
+    def __repr__(self) -> str:
+        return f"<MessageCollection n={len(self.messages)} messages>"
+    def tag_visible_counts(self, enabled_tags: Set[str]) -> dict[str, int]:
+        """
+        For each tag, return the number of messages with that tag that are currently visible.
+        """
+        counts = {}
+        for message in self.messages:
+            message_is_visible = message.tags & enabled_tags
+            for tag in message.tags:
+                if message_is_visible:
+                    if tag not in counts:
+                        counts[tag] = 0
+                    counts[tag] += 1
+        return counts
+
 class MainFrame(wx.Frame):
-    def __init__(self, parent, title, mbox_path=None):
+    def __init__(self, parent, title: str, mbox_path: Optional[str] = None):
         super().__init__(parent, title=title, size=wx.Size(900, 700))
-        self.mbox_path = mbox_path
-        self.index_exists = False
-        self.marked_messages = set()
-        self.tags = set()
+        self.mbox_path: Optional[str] = mbox_path
+        self.index_exists: bool = False
+        self.messages: MessageCollection = MessageCollection()
+        self.enabled_tags: Set[str] = set()
         self.init_ui()
         pub.subscribe(self.update_progress, 'update_progress')
         self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -139,20 +238,102 @@ class MainFrame(wx.Frame):
         else:
             self.set_status(f"Indexing... {value}%")
 
-    def update_tag_badges(self, tags=None, selected=None):
-        # tags: all available tags, selected: set of enabled tags
-        if tags is None:
-            tags = sorted(self.tags)
-        if selected is None:
-            # Default: all tags enabled
-            selected = set(tags)
-        self.enabled_tags = set(selected)
-        # Remove old badges
+    def on_index_complete(self, _=None):
+        import random
+        self.index_exists = True
+        self.search_box.Enable()
+        self.results_list.Enable()
+        self.export_btn.Enable()
+        tag_list = [
+            "work", "personal", "family", "finance", "travel", "urgent", "spam"
+        ]
+        self.messages = MessageCollection()
+        for i in range(20):
+            subject = f"Message {i+1} Subject"
+            sender = f"sender{i+1}@example.com"
+            recipients = [f"recipient{i+1}@example.com"]
+            date = f"2025-06-{i%30+1:02d}"
+            body = f"This is the body of message {i+1}."
+            num_tags = random.randint(1, 3)
+            tags = set(random.sample(tag_list, num_tags))
+            msg = Message(subject, sender, recipients, date, body, tags=tags, marked=False, msg_id=i+1)
+            self.messages.add(msg)
+        self.enabled_tags = set(self.messages.tags)
+        self.update_tag_badges()
+        if self.mbox_path:
+            self.set_status(f"Indexed: {os.path.basename(self.mbox_path)}")
+            self.SetTitle(f"Desktop Picnic — {os.path.basename(self.mbox_path)}")
+        self.show_message_list()
+
+    def show_message_list(self, filter_tags=None):
+        # Show messages filtered by tags if provided, else all
+        if filter_tags is None:
+            filter_tags = self.enabled_tags if hasattr(self, 'enabled_tags') else set(self.messages.tags)
+        filtered = self.messages if not filter_tags else self.messages.filter_by_tags(filter_tags)
+        display = [f"{'* ' if msg.marked else ''}{msg.subject} [{', '.join(sorted(msg.tags))}]" for msg in filtered]
+        self.results_list.Set(display)
+        self.set_status(f"Filtering by tags: {', '.join(sorted(filter_tags))}")
+
+    def filter_results_by_tags(self):
+        self.show_message_list()
+
+    def on_select_message(self, event):
+        idx = self.results_list.GetSelection()
+        if idx != wx.NOT_FOUND:
+            filter_tags = self.enabled_tags if hasattr(self, 'enabled_tags') else set(self.tags)
+            filtered = self.messages if not filter_tags else self.messages.filter_by_tags(filter_tags)
+            msg = filtered[idx]
+            self.show_message_content(msg)
+            self.mark_btn.Enable()
+            self.tag_btn.Enable()
+        else:
+            self.message_view.SetValue("")
+            self.mark_btn.Disable()
+            self.tag_btn.Disable()
+
+    def show_message_content(self, msg):
+        content = f"Subject: {msg.subject}\nFrom: {msg.sender}\nTo: {', '.join(msg.recipients)}\nDate: {msg.date}\nTags: {', '.join(sorted(msg.tags))}\n\n{msg.body}"
+        self.message_view.SetValue(content)
+
+    def on_mark(self, event):
+        idx = self.results_list.GetSelection()
+        if idx != wx.NOT_FOUND:
+            filter_tags = self.enabled_tags if hasattr(self, 'enabled_tags') else set(self.tags)
+            filtered = self.messages if not filter_tags else self.messages.filter_by_tags(filter_tags)
+            msg = filtered[idx]
+            msg.toggle_marked()
+            self.show_message_list()
+            self.results_list.SetSelection(idx)
+
+    def on_export(self, event):
+        wx.MessageBox("Exporting marked messages (not implemented)", "Export", wx.OK | wx.ICON_INFORMATION)
+
+    def on_tag(self, event):
+        idx = self.results_list.GetSelection()
+        if idx != wx.NOT_FOUND:
+            filter_tags = self.enabled_tags if hasattr(self, 'enabled_tags') else set(self.tags)
+            filtered = self.messages if not filter_tags else self.messages.filter_by_tags(filter_tags)
+            msg = filtered[idx]
+            # For demo: toggle the first enabled tag
+            if self.enabled_tags:
+                tag = next(iter(self.enabled_tags))
+                if tag in msg.tags:
+                    msg.remove_tag(tag)
+                else:
+                    msg.add_tag(tag)
+                self.show_message_list()
+                self.results_list.SetSelection(idx)
+                self.show_message_content(msg)
+            self.update_tag_badges()
+
+    def update_tag_badges(self) -> None:
         for child in self.tag_panel.GetChildren():
             child.Destroy()
         self.tag_sizer.Clear()
-        for idx, tag in enumerate(tags):
-            btn = wx.ToggleButton(self.tag_panel, label=tag, size=wx.Size(80, 24))
+        tag_counts = self.messages.tag_visible_counts(self.enabled_tags)
+        for idx, tag in enumerate(self.messages.tags):
+            label = f"{tag} ({tag_counts.get(tag, 0)})"
+            btn = wx.ToggleButton(self.tag_panel, label=label, size=wx.Size(80, 24))
             btn.SetValue(tag in self.enabled_tags)
             btn.Bind(wx.EVT_TOGGLEBUTTON, lambda evt, t=tag: self.on_toggle_tag(evt, t))
             btn.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
@@ -163,100 +344,18 @@ class MainFrame(wx.Frame):
         self.tag_panel.Layout()
         self.tag_panel.Fit()
         self.tag_panel.Refresh()
-        # Also relayout the parent sizer to ensure the rest of the window resizes
         self.tag_panel.GetParent().Layout()
         self.filter_results_by_tags()
 
     def on_toggle_tag(self, event, tag):
         if not hasattr(self, 'enabled_tags'):
-            self.enabled_tags = set(self.tags)
+            self.enabled_tags = set(self.messages.tags)
         if event.GetEventObject().GetValue():
             self.enabled_tags.add(tag)
         else:
             self.enabled_tags.discard(tag)
         self.filter_results_by_tags()
-
-    def filter_results_by_tags(self):
-        # Show messages that have ANY of the enabled tags
-        if not hasattr(self, 'enabled_tags') or not self.enabled_tags:
-            self.results_list.Set([])
-            self.set_status("No tags enabled. No messages to display.")
-            return
-        filtered = []
-        for msg, tags in self.message_tags.items():
-            if tags & self.enabled_tags:
-                tag_str = ', '.join(sorted(tags))
-                filtered.append(f"{msg} [{tag_str}]")
-        self.results_list.Set(filtered)
-        self.set_status(f"Filtering by tags: {', '.join(sorted(self.enabled_tags))}")
-
-    def on_index_complete(self, _=None):
-        import random
-        self.index_exists = True
-        self.search_box.Enable()
-        self.results_list.Enable()
-        self.export_btn.Enable()
-        # Expanded tag vocabulary (20 tags)
-        self.tags = {
-            "work", "personal", "legal", "family", "project", "urgent", "archive", "finance", "travel", "friends",
-            "school", "medical", "shopping", "events", "photos", "inbox", "sent", "drafts", "spam", "misc"
-        }
-        # Assign a few random tags to each message for testing
-        self.message_tags = {}
-        tag_list = list(self.tags)
-        for i in range(20):
-            msg = f"Message {i+1}"
-            num_tags = random.randint(1, 3)
-            msg_tags = set(random.sample(tag_list, num_tags))
-            self.message_tags[msg] = msg_tags
-        self.update_tag_badges(tags=self.tags)  # Defaults to all enabled
-        if self.mbox_path:
-            self.set_status(f"Indexed: {os.path.basename(self.mbox_path)}")
-            self.SetTitle(f"Desktop Picnic — {os.path.basename(self.mbox_path)}")
-        # Assign 3-7 random tags to each message for testing
-        self.message_tags = {}
-        tag_list = list(self.tags)
-        messages = []
-        for i in range(20):
-            msg = f"Message {i+1}"
-            num_tags = random.randint(3, 7)
-            msg_tags = set(random.sample(tag_list, num_tags))
-            self.message_tags[msg] = msg_tags
-            tag_str = ', '.join(sorted(msg_tags))
-            messages.append(f"{msg} [{tag_str}]")
-        self.results_list.Set(messages)
-
-    def on_search(self, event):
-        query = self.search_box.GetValue().lower()
-        self.results_list.Set([f"Message {i+1}" for i in range(20) if query in f"message {i+1}"])
-
-    def on_select_message(self, event):
-        idx = self.results_list.GetSelection()
-        if idx != wx.NOT_FOUND:
-            self.message_view.SetValue(f"Full content of {self.results_list.GetString(idx)}\n\n[Highlight matches here]")
-            self.mark_btn.Enable()
-            self.tag_btn.Enable()
-        else:
-            self.message_view.SetValue("")
-            self.mark_btn.Disable()
-            self.tag_btn.Disable()
-
-    def on_mark(self, event):
-        idx = self.results_list.GetSelection()
-        if idx != wx.NOT_FOUND:
-            msg = self.results_list.GetString(idx)
-            if msg in self.marked_messages:
-                self.marked_messages.remove(msg)
-                self.results_list.SetString(idx, msg)
-            else:
-                self.marked_messages.add(msg)
-                self.results_list.SetString(idx, f"* {msg}")
-
-    def on_export(self, event):
-        wx.MessageBox("Exporting marked messages (not implemented)", "Export", wx.OK | wx.ICON_INFORMATION)
-
-    def on_tag(self, event):
-        wx.MessageBox("Apply/Clear tag (not implemented)", "Tag", wx.OK | wx.ICON_INFORMATION)
+        self.update_tag_badges()
 
     def disable_all(self):
         self.search_box.Disable()
@@ -278,6 +377,13 @@ class MainFrame(wx.Frame):
 
     def on_about_menu(self, event):
         wx.MessageBox("Desktop Picnic\nA desktop MBOX search tool\n\u00A9 2025", "About Desktop Picnic", wx.OK | wx.ICON_INFORMATION)
+
+    def on_search(self, event):
+        query = self.search_box.GetValue().lower()
+        filtered = MessageCollection([msg for msg in self.messages if query in msg.subject.lower() or query in msg.body.lower()])
+        display = [f"{'* ' if msg.marked else ''}{msg.subject} [{', '.join(sorted(msg.tags))}]" for msg in filtered]
+        self.results_list.Set(display)
+        self.set_status(f"Search results for: {query}")
 
 class DesktopPicnicApp(wx.App):
     def OnInit(self):
