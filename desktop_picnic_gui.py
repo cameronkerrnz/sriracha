@@ -12,32 +12,36 @@ class IndexThread(threading.Thread):
 
     def run(self):
         import time
-        for i in range(101):
-            wx.CallAfter(pub.sendMessage, 'update_progress', value=i)
-            time.sleep(0.02)
-        wx.CallAfter(self.callback, None)
+        steps = 10
+        delay = 0.03
+        for i in range(steps + 1):
+            wx.CallAfter(pub.sendMessage, 'update_progress', value=int(i * 100 / steps))
+            time.sleep(delay)
+        wx.CallAfter(lambda: self.callback(None))
 
 class MainFrame(wx.Frame):
-    def __init__(self, parent, title):
+    def __init__(self, parent, title, mbox_path=None):
         super().__init__(parent, title=title, size=wx.Size(900, 700))
-        self.mbox_path = None
+        self.mbox_path = mbox_path
         self.index_exists = False
         self.marked_messages = set()
         self.tags = set()
         self.init_ui()
         pub.subscribe(self.update_progress, 'update_progress')
         self.Bind(wx.EVT_CLOSE, self.on_close)
+        if self.mbox_path:
+            wx.CallAfter(self.open_mbox_path, self.mbox_path)
 
     def init_ui(self):
         menubar = wx.MenuBar()
         # File menu
         file_menu = wx.Menu()
-        open_item = file_menu.Append(wx.ID_OPEN, "&Open...\tCmd+O", "Open MBOX file")
-        quit_item = file_menu.Append(wx.ID_EXIT, "&Quit\tCmd+Q", "Quit Desktop Picnic")
+        open_item = file_menu.Append(wx.ID_OPEN, "&Open...\tCtrl+O", "Open MBOX file")
+        quit_item = file_menu.Append(wx.ID_EXIT, "&Quit\tCtrl+Q", "Quit Desktop Picnic")
         menubar.Append(file_menu, "&File")
         # Help menu
         help_menu = wx.Menu()
-        about_item = help_menu.Append(wx.ID_ABOUT, "&About", "About Desktop Picnic")
+        about_item = help_menu.Append(wx.ID_ABOUT, "&About\tF1", "About Desktop Picnic")
         menubar.Append(help_menu, "&Help")
         self.SetMenuBar(menubar)
         self.Bind(wx.EVT_MENU, self.on_open_menu, open_item)
@@ -108,21 +112,24 @@ class MainFrame(wx.Frame):
     def set_status(self, msg):
         self.status_msg.SetLabel(msg)
 
+    def open_mbox_path(self, path):
+        self.mbox_path = path
+        self.set_status(f"Indexing {os.path.basename(path)}...")
+        self.SetTitle(f"Desktop Picnic — {os.path.basename(path)}")
+        self.progress.SetValue(0)
+        self.progress.Show()
+        self.index_exists = False
+        self.disable_all()
+        thread = IndexThread(self.mbox_path, self.on_index_complete)
+        thread.start()
+
     def open_mbox(self, event):
         with wx.FileDialog(self, "Select MBOX File", wildcard="MBOX files (*.mbox)|*.mbox|All files (*.*)|*.*", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
             if fileDialog.ShowModal() == wx.ID_CANCEL:
                 self.set_status("No MBOX file selected.")
                 return
             path = fileDialog.GetPath()
-            self.mbox_path = path
-            self.set_status(f"Indexing {os.path.basename(path)}...")
-            self.SetTitle(f"Desktop Picnic — {os.path.basename(path)}")
-            self.progress.SetValue(0)
-            self.progress.Show()
-            self.index_exists = False
-            self.disable_all()
-            thread = IndexThread(self.mbox_path, self.on_index_complete)
-            thread.start()
+            self.open_mbox_path(path)
 
     def update_progress(self, value):
         self.progress.SetValue(value)
@@ -144,10 +151,32 @@ class MainFrame(wx.Frame):
         for child in self.tag_panel.GetChildren():
             child.Destroy()
         self.tag_sizer.Clear()
-        for tag in tags:
-            btn = wx.ToggleButton(self.tag_panel, label=tag, size=wx.Size(90, 28))
+        # Use Plotly's 'G10' qualitative color palette for tags
+        tag_colors = [
+            wx.Colour( 27, 158, 119),   # dark green
+            wx.Colour(217,  95,   2),   # dark orange
+            wx.Colour(117, 112, 179),   # dark purple
+            wx.Colour(231,  41, 138),   # dark pink
+            wx.Colour(102, 166,  30),   # dark lime
+            wx.Colour(230, 171,   2),   # dark yellow
+            wx.Colour(166, 118,  29),   # dark brown
+            wx.Colour(102, 102, 102),   # dark gray
+        ]
+        tag_list_sorted = list(tags) if isinstance(tags, list) else sorted(list(tags))
+        tag_color_map = {tag: tag_colors[i % len(tag_colors)] for i, tag in enumerate(tag_list_sorted)}
+        for idx, tag in enumerate(tags):
+            btn = wx.ToggleButton(self.tag_panel, label=tag, size=wx.Size(80, 28), style=wx.BORDER_NONE)
             btn.SetValue(tag in self.enabled_tags)
             btn.Bind(wx.EVT_TOGGLEBUTTON, lambda evt, t=tag: self.on_toggle_tag(evt, t))
+            btn.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+            btn.SetBackgroundColour(tag_color_map[tag])
+            # Use white text for dark backgrounds, dark text for light backgrounds
+            bg = tag_color_map[tag]
+            btn.SetForegroundColour(wx.Colour(255,255,255))
+            btn.SetWindowStyleFlag(wx.BORDER_NONE)
+            btn.SetMinSize(wx.Size(60, 28))
+            btn.SetMaxSize(wx.Size(120, 28))
+            btn.SetToolTip(f"Filter by tag: {tag}")
             self.tag_sizer.Add(btn, flag=wx.RIGHT|wx.BOTTOM, border=4)
         self.tag_panel.Layout()
         self.tag_panel.Fit()
@@ -270,9 +299,11 @@ class MainFrame(wx.Frame):
 
 class DesktopPicnicApp(wx.App):
     def OnInit(self):
-        self.frame = MainFrame(None, "Desktop Picnic")
+        mbox_path = None
+        if len(sys.argv) > 1:
+            mbox_path = sys.argv[1]
+        self.frame = MainFrame(None, "Desktop Picnic", mbox_path=mbox_path)
         self.frame.Show()
-        self.frame.Raise()
         return True
 
 def main():
