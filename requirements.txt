@@ -2,3 +2,4 @@ wxPython>=4.2.1
 pypubsub>=4.0.3
 pyinstaller>=6.14.1
 whoosh>=2.7.4
+tqdm>=4.66.0
