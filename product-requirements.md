@@ -22,10 +22,11 @@ The application should be able to be easily copied from the server and then run 
 
 The application is a GUI desktop application using the QT framework, and the bulk of the application is written in Python. Content indexing will use the Whoosh.
 
-## Important UI Functions
+## UI Functions
 
-- Open an MBOX archive (MBOX & its index)
-- Open an MBOX archive (MBOX which doesn't have an index yet) -- initiates index
+- Open an MBOX file
+  - if an index does not yet exist, then this will initiate indexing
+  - a progress bar will be present so the user can see progress
 - Search the archive according to common email search needs
 - Mark/unmark messages according based on search results
 - Mark/unmark messages manually
@@ -35,7 +36,6 @@ The application is a GUI desktop application using the QT framework, and the bul
 - Open attachments upon user request
 - Apply or clear tags according to the user's needs (these tags go into the index)
 - Toggle message list visibility to only show only certain tags.
-
 
 ## Milestones
 
@@ -50,6 +50,8 @@ The application is a GUI desktop application using the QT framework, and the bul
 
 - initial UI
 - prove that this can be done as a 'single-executable' deployment
+
+
 
 ### Milestone 3
 
