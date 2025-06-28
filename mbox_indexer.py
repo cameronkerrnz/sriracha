@@ -6,6 +6,8 @@ from whoosh.fields import Schema
 from whoosh.index import create_in, open_dir
 from whoosh.analysis import StemmingAnalyzer
 from email.message import Message as EmailMessage
+from email.utils import parsedate_to_datetime
+import logging
 
 class MBoxIndexer(threading.Thread):
     """
@@ -18,6 +20,7 @@ class MBoxIndexer(threading.Thread):
         schema: Schema,
         progress_callback: Optional[Callable[[str, int, int], None]] = None,
         message_callback: Optional[Callable[[str, int, EmailMessage], None]] = None,
+        status_callback: Optional[Callable[[str], None]] = None,
         extra: Optional[Dict[str, Any]] = None
     ):
         super().__init__()
@@ -26,6 +29,7 @@ class MBoxIndexer(threading.Thread):
         self.schema = schema
         self.progress_callback = progress_callback
         self.message_callback = message_callback
+        self.status_callback = status_callback
         self.extra = extra or {}
         self._stop_event = threading.Event()
 
@@ -33,6 +37,7 @@ class MBoxIndexer(threading.Thread):
         self._stop_event.set()
 
     def run(self) -> None:
+        logger = logging.getLogger(__name__)
         # Remove any existing index directory and its contents
         if os.path.exists(self.index_dir):
             import shutil
@@ -43,11 +48,25 @@ class MBoxIndexer(threading.Thread):
             ix = create_in(self.index_dir, self.schema)
         except Exception:
             ix = open_dir(self.index_dir)
-        writer = ix.writer()
+        # Performance: set StemmingAnalyzer cachesize to -1 (unbounded)
+        for fieldname, field in self.schema.items():
+            if hasattr(field, 'format') and hasattr(field.format, 'analyzer') and field.format.analyzer:
+                analyzer = field.format.analyzer
+                analyzer.cachesize = -1
+                if hasattr(analyzer, 'clear'):
+                    analyzer.clear()
+        # Use batch writer settings for speed
+        writer = ix.writer(limitmb=256, procs=4, multisegment=True)
         for mbox_path in self.mbox_files:
             if not os.path.exists(mbox_path):
                 continue
+            if self.status_callback:
+                self.status_callback(f"Opening MBOX and building Table of Contents: {mbox_path}")
+            logger.info(f"Opening MBOX {mbox_path!r}")
+            # TODO: Make a custom MBox class that doesn't use a TOC
             mbox = mailbox.mbox(mbox_path)
+            if self.status_callback:
+                self.status_callback(f"Indexing messages in: {mbox_path}")
             mbox_file_size = os.path.getsize(mbox_path)
             processed = 0
             for i, (key, msg) in enumerate(mbox.iteritems()):
@@ -61,7 +80,6 @@ class MBoxIndexer(threading.Thread):
                 recipients = msg.get('to', '')
                 date = msg.get('date', '')
                 try:
-                    from email.utils import parsedate_to_datetime
                     date_parsed = parsedate_to_datetime(date) if date else None
                 except Exception:
                     date_parsed = None
@@ -88,15 +106,7 @@ class MBoxIndexer(threading.Thread):
                             body = ''
                     except Exception:
                         body = ''
-                # Use getattr to access _lookup if it exists, else None
-                mbox_lookup = getattr(mbox, '_lookup', None)
-                if callable(mbox_lookup):
-                    try:
-                        mbox_message_extents = mbox_lookup(key)
-                    except Exception:
-                        mbox_message_extents = None
-                else:
-                    mbox_message_extents = None
+                mbox_message_extents = mbox._lookup(key)
                 writer.add_document(
                     subject=subject,
                     sender=sender,
@@ -116,17 +126,29 @@ class MBoxIndexer(threading.Thread):
                     percent = 0
                 if self.progress_callback:
                     self.progress_callback(mbox_path, percent, processed)
+            if self.status_callback:
+                self.status_callback(f"Finalising indexing: {mbox_path}")
         writer.commit()
         # Ensure processed is always defined
         if self.progress_callback:
             self.progress_callback('done', 100, locals().get('processed', 0))
+        if self.status_callback:
+            self.status_callback("All MBOX files indexed.")
 
 if __name__ == "__main__":
     import sys
     import time
+    import logging
     from whoosh.fields import Schema, TEXT, ID, DATETIME, STORED
     from whoosh.analysis import StemmingAnalyzer
     from collections import Counter
+
+    # Configure logging for the CLI
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[%(asctime)s] %(levelname)s %(name)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
 
     # Define a schema similar to the experiment
     schema = Schema(
@@ -166,13 +188,17 @@ if __name__ == "__main__":
                     label_set.add(label)
                     label_counter[label] += 1
 
+    def status_callback(msg: str):
+        print(f"[STATUS] {msg}")
+
     print(f"Indexing {len(mbox_files)} MBOX file(s) into {index_dir} ...")
     indexer = MBoxIndexer(
         mbox_files=mbox_files,
         index_dir=index_dir,
         schema=schema,
         progress_callback=progress_callback,
-        message_callback=message_callback
+        message_callback=message_callback,
+        status_callback=status_callback
     )
     indexer.start()
     while indexer.is_alive():
