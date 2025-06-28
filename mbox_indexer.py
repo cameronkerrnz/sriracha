@@ -8,6 +8,7 @@ from whoosh.analysis import StemmingAnalyzer
 from email.message import Message as EmailMessage
 from email.utils import parsedate_to_datetime
 import logging
+import json
 
 class MBoxIndexer(threading.Thread):
     """
@@ -38,6 +39,7 @@ class MBoxIndexer(threading.Thread):
 
     def run(self) -> None:
         logger = logging.getLogger(__name__)
+        aggregate_label_counts = {}
         # Remove any existing index directory and its contents
         if os.path.exists(self.index_dir):
             import shutil
@@ -75,6 +77,14 @@ class MBoxIndexer(threading.Thread):
                     return
                 if self.message_callback:
                     self.message_callback(mbox_path, i, msg)
+                # Aggregate X-Gmail-Labels for this message
+                label_headers = msg.get_all('X-Gmail-Labels', [])
+                import re
+                for header in label_headers:
+                    for label in header.split(','):
+                        label = re.sub(r'\s+', ' ', label).strip()
+                        if label:
+                            aggregate_label_counts[label] = aggregate_label_counts.get(label, 0) + 1
                 subject = msg.get('subject', '')
                 sender = msg.get('from', '')
                 recipients = msg.get('to', '')
@@ -134,6 +144,11 @@ class MBoxIndexer(threading.Thread):
             self.progress_callback('done', 100, locals().get('processed', 0))
         if self.status_callback:
             self.status_callback("All MBOX files indexed.")
+        # Save aggregate label counts to JSON in the index directory
+        if aggregate_label_counts:
+            agg_path = os.path.join(self.index_dir, 'aggregate_labels.json')
+            with open(agg_path, 'w', encoding='utf-8') as f:
+                json.dump(aggregate_label_counts, f, indent=2, sort_keys=True)
 
 if __name__ == "__main__":
     import sys
