@@ -151,31 +151,13 @@ class MainFrame(wx.Frame):
         for child in self.tag_panel.GetChildren():
             child.Destroy()
         self.tag_sizer.Clear()
-        # Use Plotly's 'G10' qualitative color palette for tags
-        tag_colors = [
-            wx.Colour( 27, 158, 119),   # dark green
-            wx.Colour(217,  95,   2),   # dark orange
-            wx.Colour(117, 112, 179),   # dark purple
-            wx.Colour(231,  41, 138),   # dark pink
-            wx.Colour(102, 166,  30),   # dark lime
-            wx.Colour(230, 171,   2),   # dark yellow
-            wx.Colour(166, 118,  29),   # dark brown
-            wx.Colour(102, 102, 102),   # dark gray
-        ]
-        tag_list_sorted = list(tags) if isinstance(tags, list) else sorted(list(tags))
-        tag_color_map = {tag: tag_colors[i % len(tag_colors)] for i, tag in enumerate(tag_list_sorted)}
         for idx, tag in enumerate(tags):
-            btn = wx.ToggleButton(self.tag_panel, label=tag, size=wx.Size(80, 28), style=wx.BORDER_NONE)
+            btn = wx.ToggleButton(self.tag_panel, label=tag, size=wx.Size(80, 24))
             btn.SetValue(tag in self.enabled_tags)
             btn.Bind(wx.EVT_TOGGLEBUTTON, lambda evt, t=tag: self.on_toggle_tag(evt, t))
-            btn.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-            btn.SetBackgroundColour(tag_color_map[tag])
-            # Use white text for dark backgrounds, dark text for light backgrounds
-            bg = tag_color_map[tag]
-            btn.SetForegroundColour(wx.Colour(255,255,255))
-            btn.SetWindowStyleFlag(wx.BORDER_NONE)
-            btn.SetMinSize(wx.Size(60, 28))
-            btn.SetMaxSize(wx.Size(120, 28))
+            btn.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+            btn.SetMinSize(wx.Size(60, 24))
+            btn.SetMaxSize(wx.Size(120, 24))
             btn.SetToolTip(f"Filter by tag: {tag}")
             self.tag_sizer.Add(btn, flag=wx.RIGHT|wx.BOTTOM, border=4)
         self.tag_panel.Layout()
@@ -219,12 +201,12 @@ class MainFrame(wx.Frame):
             "work", "personal", "legal", "family", "project", "urgent", "archive", "finance", "travel", "friends",
             "school", "medical", "shopping", "events", "photos", "inbox", "sent", "drafts", "spam", "misc"
         }
-        # Assign 3-7 random tags to each message for testing
+        # Assign a few random tags to each message for testing
         self.message_tags = {}
         tag_list = list(self.tags)
         for i in range(20):
             msg = f"Message {i+1}"
-            num_tags = random.randint(3, 7)
+            num_tags = random.randint(1, 3)
             msg_tags = set(random.sample(tag_list, num_tags))
             self.message_tags[msg] = msg_tags
         self.update_tag_badges(tags=self.tags)  # Defaults to all enabled
