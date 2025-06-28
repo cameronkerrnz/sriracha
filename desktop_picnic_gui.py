@@ -5,6 +5,9 @@ import threading
 from pubsub import pub  # Use pypubsub instead
 from collections.abc import MutableSet
 from typing import Any, Iterable, Iterator, Optional, Set, List
+from mbox_indexer import MBoxIndexer
+from whoosh.fields import Schema, TEXT, ID, DATETIME, STORED
+from whoosh.analysis import StemmingAnalyzer
 
 class OrderedSet(MutableSet):
     def __init__(self, iterable: Optional[Iterable[Any]] = None):
@@ -136,6 +139,8 @@ class MainFrame(wx.Frame):
         # File menu
         file_menu = wx.Menu()
         open_item = file_menu.Append(wx.ID_OPEN, "&Open...\tCtrl+O", "Open MBOX file")
+        rebuild_index_id = wx.NewIdRef()
+        rebuild_item = file_menu.Append(rebuild_index_id, "Rebuild &Index", "Rebuild the index for the current MBOX file")
         quit_item = file_menu.Append(wx.ID_EXIT, "&Quit\tCtrl+Q", "Quit Desktop Picnic")
         menubar.Append(file_menu, "&File")
         # Help menu
@@ -144,6 +149,7 @@ class MainFrame(wx.Frame):
         menubar.Append(help_menu, "&Help")
         self.SetMenuBar(menubar)
         self.Bind(wx.EVT_MENU, self.on_open_menu, open_item)
+        self.Bind(wx.EVT_MENU, self.on_rebuild_index_menu, rebuild_item)
         self.Bind(wx.EVT_MENU, self.on_quit_menu, quit_item)
         self.Bind(wx.EVT_MENU, self.on_about_menu, about_item)
 
@@ -211,16 +217,78 @@ class MainFrame(wx.Frame):
     def set_status(self, msg):
         self.status_msg.SetLabel(msg)
 
-    def open_mbox_path(self, path):
+    def open_mbox_path(self, path, force_rebuild: bool = False):
         self.mbox_path = path
-        self.set_status(f"Indexing {os.path.basename(path)}...")
         self.SetTitle(f"Desktop Picnic — {os.path.basename(path)}")
+        mbox_dir = os.path.dirname(path)
+        mbox_base = os.path.splitext(os.path.basename(path))[0]
+        index_dir = os.path.join(mbox_dir, mbox_base + ".whoosh-index")
+        if not force_rebuild and os.path.exists(index_dir):
+            self.set_status(f"Index already exists for {os.path.basename(path)}. Ready.")
+            self.progress.Hide()
+            self.index_exists = True
+            self.search_box.Enable()
+            self.results_list.Enable()
+            self.export_btn.Enable()
+            self.enabled_tags = set()
+            self.update_tag_badges()
+            return
+        self.set_status(f"Indexing {os.path.basename(path)}...")
         self.progress.SetValue(0)
         self.progress.Show()
         self.index_exists = False
         self.disable_all()
-        thread = IndexThread(self.mbox_path, self.on_index_complete)
-        thread.start()
+        mbox_files = [path]
+        def status_callback(msg: str):
+            import re
+            def shorten_path(text):
+                return re.sub(r'([/\\][^/\\]+)+', lambda m: os.path.basename(m.group(0)), text)
+            short_msg = shorten_path(msg)
+            wx.CallAfter(self.set_status, short_msg)
+            if "indexed" in short_msg.lower() or "all mbox files indexed" in short_msg.lower() or "completed indexing" in short_msg.lower():
+                wx.CallAfter(self.progress.Hide)
+        def progress_callback(mbox_path: str, percent: int, processed: int):
+            wx.CallAfter(self.progress.SetValue, percent)
+            if percent >= 100:
+                wx.CallAfter(self.progress.Hide)
+        def message_callback(mbox_path: str, idx: int, msg):
+            pass
+        schema = Schema(
+            subject=TEXT(stored=True, analyzer=StemmingAnalyzer()),
+            sender=TEXT(stored=True),
+            recipients=TEXT(stored=True),
+            date=DATETIME(stored=True),
+            body=TEXT(stored=True, analyzer=StemmingAnalyzer()),
+            mbox_file=ID(stored=True),
+            msg_key=ID(stored=True, unique=True),
+            mbox_message_extents=STORED()
+        )
+        self.indexer = MBoxIndexer(
+            mbox_files=mbox_files,
+            index_dir=index_dir,
+            schema=schema,
+            progress_callback=progress_callback,
+            message_callback=message_callback,
+            status_callback=status_callback
+        )
+        def on_index_complete():
+            self.index_exists = True
+            self.search_box.Enable()
+            self.results_list.Enable()
+            self.export_btn.Enable()
+            self.enabled_tags = set()
+            self.update_tag_badges()
+            if self.mbox_path:
+                self.set_status(f"Indexed: {os.path.basename(self.mbox_path)}")
+                self.SetTitle(f"Desktop Picnic — {os.path.basename(self.mbox_path)}")
+            self.progress.Hide()
+        def wait_for_indexer():
+            if self.indexer.is_alive():
+                wx.CallLater(100, wait_for_indexer)
+            else:
+                wx.CallAfter(on_index_complete)
+        self.indexer.start()
+        wait_for_indexer()
 
     def open_mbox(self, event):
         with wx.FileDialog(self, "Select MBOX File", wildcard="MBOX files (*.mbox)|*.mbox|All files (*.*)|*.*", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
@@ -268,7 +336,7 @@ class MainFrame(wx.Frame):
     def show_message_list(self, filter_tags=None):
         # Show messages filtered by tags if provided, else all
         if filter_tags is None:
-            filter_tags = self.enabled_tags if hasattr(self, 'enabled_tags') else set(self.messages.tags)
+            filter_tags = self.enabled_tags
         filtered = self.messages if not filter_tags else self.messages.filter_by_tags(filter_tags)
         display = [f"{'* ' if msg.marked else ''}{msg.subject} [{', '.join(sorted(msg.tags))}]" for msg in filtered]
         self.results_list.Set(display)
@@ -280,7 +348,7 @@ class MainFrame(wx.Frame):
     def on_select_message(self, event):
         idx = self.results_list.GetSelection()
         if idx != wx.NOT_FOUND:
-            filter_tags = self.enabled_tags if hasattr(self, 'enabled_tags') else set(self.tags)
+            filter_tags = self.enabled_tags
             filtered = self.messages if not filter_tags else self.messages.filter_by_tags(filter_tags)
             msg = filtered[idx]
             self.show_message_content(msg)
@@ -298,7 +366,7 @@ class MainFrame(wx.Frame):
     def on_mark(self, event):
         idx = self.results_list.GetSelection()
         if idx != wx.NOT_FOUND:
-            filter_tags = self.enabled_tags if hasattr(self, 'enabled_tags') else set(self.tags)
+            filter_tags = self.enabled_tags
             filtered = self.messages if not filter_tags else self.messages.filter_by_tags(filter_tags)
             msg = filtered[idx]
             msg.toggle_marked()
@@ -311,7 +379,7 @@ class MainFrame(wx.Frame):
     def on_tag(self, event):
         idx = self.results_list.GetSelection()
         if idx != wx.NOT_FOUND:
-            filter_tags = self.enabled_tags if hasattr(self, 'enabled_tags') else set(self.tags)
+            filter_tags = self.enabled_tags
             filtered = self.messages if not filter_tags else self.messages.filter_by_tags(filter_tags)
             msg = filtered[idx]
             # For demo: toggle the first enabled tag
@@ -384,6 +452,12 @@ class MainFrame(wx.Frame):
         display = [f"{'* ' if msg.marked else ''}{msg.subject} [{', '.join(sorted(msg.tags))}]" for msg in filtered]
         self.results_list.Set(display)
         self.set_status(f"Search results for: {query}")
+
+    def on_rebuild_index_menu(self, event):
+        if self.mbox_path:
+            self.open_mbox_path(self.mbox_path, force_rebuild=True)
+        else:
+            wx.MessageBox("No MBOX file is currently open.", "Rebuild Index", wx.OK | wx.ICON_INFORMATION)
 
 class DesktopPicnicApp(wx.App):
     def OnInit(self):
