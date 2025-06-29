@@ -119,7 +119,7 @@ class MessageCollection:
 
 class MainFrame(wx.Frame):
     def __init__(self, parent, title: str, mbox_path: Optional[str] = None):
-        super().__init__(parent, title=title, size=wx.Size(900, 700))
+        super().__init__(parent, title=title, size=wx.Size(1200, 700))
         self.mbox_path: Optional[str] = mbox_path
         self.index_exists: bool = False
         self.messages: MessageCollection = MessageCollection()
@@ -247,6 +247,7 @@ class MainFrame(wx.Frame):
             self.results_list.Enable()
             self.export_btn.Enable()
             self.enabled_labels = set(self.aggregate_label_counts.keys())
+            self.label_filter_states = {l: 'off' for l in self.aggregate_label_counts.keys()}
             self.update_label_badges()
             self.query_engine = MBoxQuery(index_dir)
             return
@@ -283,7 +284,7 @@ class MainFrame(wx.Frame):
             self.search_box.SetFocus()  # Ensure search box is focused
             self.results_list.Enable()
             self.export_btn.Enable()
-            self.enabled_labels = set()
+            self.label_filter_states = {l: 'off' for l in self.aggregate_label_counts.keys()}
             self.update_label_badges()
             if self.mbox_path:
                 self.set_status(f"Indexed: {os.path.basename(self.mbox_path)}")
@@ -337,6 +338,7 @@ class MainFrame(wx.Frame):
             msg = Message(subject, sender, recipients, date, body, labels=labels, marked=False, msg_id=i+1)
             self.messages.add(msg)
         self.enabled_labels = set(self.messages.labels)
+        self.label_filter_states = {l: 'off' for l in self.aggregate_label_counts.keys()}
         self.update_label_badges()
         if self.mbox_path:
             self.set_status(f"Indexed: {os.path.basename(self.mbox_path)}")
@@ -353,21 +355,35 @@ class MainFrame(wx.Frame):
         self.set_status(f"Filtering by labels: {', '.join(sorted(filter_labels))}")
 
     def filter_results_by_labels(self):
-        # If using search results, filter them by enabled_labels
-        if hasattr(self, '_search_results') and self._search_results:
-            filtered = []
-            for hit in self._search_results:
-                labels = hit.get('labels', '')
-                labels_set = set(l.strip() for l in labels.split(',') if l.strip())
-                if not self.enabled_labels or (labels_set & self.enabled_labels):
-                    filtered.append(hit)
-            display = [f"{'* ' if r.get('marked', False) else ''}{r.get('subject', '')} [{r.get('sender', '')}]" for r in filtered]
-            self.results_list.Set(display)
-            self._filtered_results = filtered
-            self.set_status(f"Filtering by labels: {', '.join(sorted(self.enabled_labels))} ({len(filtered)} shown)")
+        # Tri-state filtering: include, exclude, off
+        include_labels = {l for l, s in self.label_filter_states.items() if s == 'include'}
+        exclude_labels = {l for l, s in self.label_filter_states.items() if s == 'exclude'}
+        # If all are off, no filtering
+        if not include_labels and not exclude_labels:
+            filtered = self._search_results if hasattr(self, '_search_results') and self._search_results else self.messages
         else:
-            # Fallback to in-memory MessageCollection
-            self.show_message_list()
+            # Filter search results or in-memory messages
+            base = self._search_results if hasattr(self, '_search_results') and self._search_results else self.messages
+            filtered = []
+            for hit in base:
+                # hit can be dict (search) or Message (in-memory)
+                if isinstance(hit, dict):
+                    labels = hit.get('labels', '')
+                    labels_set = set(l.strip() for l in labels.split(',') if l.strip())
+                else:
+                    labels_set = set(getattr(hit, 'labels', []))
+                if include_labels and not (include_labels <= labels_set):
+                    continue
+                if exclude_labels and (exclude_labels & labels_set):
+                    continue
+                filtered.append(hit)
+        display = [f"{'* ' if (r.get('marked', False) if isinstance(r, dict) else r.marked) else ''}{r.get('subject', '') if isinstance(r, dict) else r.subject} [{r.get('sender', '') if isinstance(r, dict) else r.sender}]" for r in filtered]
+        self.results_list.Set(display)
+        self._filtered_results = filtered
+        if include_labels or exclude_labels:
+            self.set_status(f"Label filter: +{', '.join(sorted(include_labels))} -{', '.join(sorted(exclude_labels))} ({len(filtered)} shown)")
+        else:
+            self.set_status(f"No label filter ({len(filtered)} shown)")
 
     def on_select_message(self, event):
         idx = self.results_list.GetSelection()
@@ -450,12 +466,19 @@ class MainFrame(wx.Frame):
             tooltip_label = label
             if label.lower().startswith('category '):
                 display_label = label[9:].lstrip()
-            badge_label = f"{display_label} ({count})"
+            # Tri-state: off, include, exclude
+            state = self.label_filter_states.get(label, 'off')
+            if state == 'include':
+                badge_label = f"{display_label} ({count}) +"
+            elif state == 'exclude':
+                badge_label = f"{display_label} ({count}) -"
+            else:
+                badge_label = f"{display_label} ({count})"
             btn = wx.ToggleButton(self.tag_panel, label=badge_label)
-            btn.SetValue(label in self.enabled_labels)
-            btn.Bind(wx.EVT_TOGGLEBUTTON, lambda evt, l=label: self.on_toggle_label(evt, l))
+            btn.SetValue(state != 'off')
+            btn.Bind(wx.EVT_TOGGLEBUTTON, lambda evt, l=label: self.on_cycle_label_state(evt, l))
             btn.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
-            btn.SetToolTip(f"Filter by label: {tooltip_label}")
+            btn.SetToolTip(f"Filter by label: {tooltip_label}\nClick to cycle: off → include (+) → exclude (-) → off")
             self.tag_sizer.Add(btn, flag=wx.RIGHT|wx.BOTTOM, border=4)
         self.tag_panel.Layout()
         self.tag_panel.Fit()
@@ -463,14 +486,15 @@ class MainFrame(wx.Frame):
         self.tag_panel.GetParent().Layout()
         self.filter_results_by_labels()
 
-    def on_toggle_label(self, event, label):
-        if not hasattr(self, 'enabled_labels'):
-            self.enabled_labels = set(self.aggregate_label_counts.keys())
-        if event.GetEventObject().GetValue():
-            self.enabled_labels.add(label)
+    def on_cycle_label_state(self, event, label):
+        # Cycle: off → include → exclude → off
+        state = self.label_filter_states.get(label, 'off')
+        if state == 'off':
+            self.label_filter_states[label] = 'include'
+        elif state == 'include':
+            self.label_filter_states[label] = 'exclude'
         else:
-            self.enabled_labels.discard(label)
-        self.filter_results_by_labels()
+            self.label_filter_states[label] = 'off'
         self.update_label_badges()
 
     def disable_all(self):
