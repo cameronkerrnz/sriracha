@@ -402,18 +402,22 @@ class MainFrame(wx.Frame):
         for child in self.tag_panel.GetChildren():
             child.Destroy()
         self.tag_sizer.Clear()
-        # Use aggregate_label_counts for badge counts
         label_counts = self.aggregate_label_counts
         for idx, label in enumerate(sorted(label_counts.keys(), key=lambda s: s.lower())):
             count = label_counts.get(label, 0)
-            badge_label = f"{label} ({count})"
-            btn = wx.ToggleButton(self.tag_panel, label=badge_label, size=wx.Size(80, 24))
+            # Remove 'Category ' prefix from button label, but keep in tooltip
+            display_label = label
+            tooltip_label = label
+            if label.lower().startswith('category '):
+                display_label = label[9:].lstrip()
+            badge_label = f"{display_label} ({count})"
+            btn = wx.ToggleButton(self.tag_panel, label=badge_label)
             btn.SetValue(label in self.enabled_labels)
             btn.Bind(wx.EVT_TOGGLEBUTTON, lambda evt, l=label: self.on_toggle_label(evt, l))
             btn.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+            # Autosize: let wxPython determine the best size
             btn.SetMinSize(wx.Size(60, 24))
-            btn.SetMaxSize(wx.Size(120, 24))
-            btn.SetToolTip(f"Filter by label: {label}")
+            btn.SetMaxSize(wx.Size(180, 24))
             self.tag_sizer.Add(btn, flag=wx.RIGHT|wx.BOTTOM, border=4)
         self.tag_panel.Layout()
         self.tag_panel.Fit()
