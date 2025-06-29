@@ -167,6 +167,7 @@ class MainFrame(wx.Frame):
         self.enabled_labels: Set[str] = set()
         self.aggregate_label_counts: dict[str, int] = {}
         self.query_engine: Optional[MBoxQuery] = None
+        self.show_highlights: bool = True  # Ensure this is always defined
         self.init_ui()
         pub.subscribe(self.update_progress, 'update_progress')
         self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -182,6 +183,12 @@ class MainFrame(wx.Frame):
         rebuild_item = file_menu.Append(rebuild_index_id, "Rebuild &Index", "Rebuild the index for the current MBOX file")
         quit_item = file_menu.Append(wx.ID_EXIT, "&Quit\tCtrl+Q", "Quit Desktop Picnic")
         menubar.Append(file_menu, "&File")
+        # View menu
+        view_menu = wx.Menu()
+        self.highlights_menu_id = wx.NewIdRef()
+        self.highlights_menu_item = view_menu.Append(self.highlights_menu_id, "Highlights\tCtrl-Shift-H", kind=wx.ITEM_CHECK)
+        self.highlights_menu_item.Check(True)  # Default to on
+        menubar.Append(view_menu, "&View")
         # Help menu
         help_menu = wx.Menu()
         about_item = help_menu.Append(wx.ID_ABOUT, "&About\tF1", "About Desktop Picnic")
@@ -194,6 +201,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_quit_menu, quit_item)
         self.Bind(wx.EVT_MENU, self.on_about_menu, about_item)
         self.Bind(wx.EVT_MENU, self.on_search_guide_menu, search_guide_item)
+        self.Bind(wx.EVT_MENU, self.on_toggle_highlights_menu, self.highlights_menu_item)
 
         panel = wx.Panel(self)
         vbox = wx.BoxSizer(wx.VERTICAL)
@@ -231,20 +239,6 @@ class MainFrame(wx.Frame):
         right_sizer = wx.BoxSizer(wx.VERTICAL)
         self.message_view = wx.TextCtrl(right_panel, style=wx.TE_MULTILINE|wx.TE_READONLY)
         right_sizer.Add(self.message_view, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
-        hbox_actions = wx.BoxSizer(wx.HORIZONTAL)
-        self.mark_btn = wx.Button(right_panel, label="Mark/Unmark")
-        self.mark_btn.Bind(wx.EVT_BUTTON, self.on_mark)
-        self.mark_btn.Disable()
-        hbox_actions.Add(self.mark_btn, flag=wx.ALL, border=5)
-        self.export_btn = wx.Button(right_panel, label="Export Marked")
-        self.export_btn.Bind(wx.EVT_BUTTON, self.on_export)
-        self.export_btn.Disable()
-        hbox_actions.Add(self.export_btn, flag=wx.ALL, border=5)
-        self.tag_btn = wx.Button(right_panel, label="Apply/Clear Tag")
-        self.tag_btn.Bind(wx.EVT_BUTTON, self.on_tag)
-        self.tag_btn.Disable()
-        hbox_actions.Add(self.tag_btn, flag=wx.ALL, border=5)
-        right_sizer.Add(hbox_actions, flag=wx.ALIGN_LEFT)
         right_panel.SetSizer(right_sizer)
 
         # Add panels to splitter
@@ -289,7 +283,6 @@ class MainFrame(wx.Frame):
             self.search_box.Enable()
             self.search_box.SetFocus()  # Ensure search box is focused
             self.results_list.Enable()
-            self.export_btn.Enable()
             self.enabled_labels = set(self.aggregate_label_counts.keys())
             self.label_filter_states = {l: 'off' for l in self.aggregate_label_counts.keys()}
             self.update_label_badges()
@@ -327,7 +320,6 @@ class MainFrame(wx.Frame):
             self.search_box.Enable()
             self.search_box.SetFocus()  # Ensure search box is focused
             self.results_list.Enable()
-            self.export_btn.Enable()
             self.label_filter_states = {l: 'off' for l in self.aggregate_label_counts.keys()}
             self.update_label_badges()
             if self.mbox_path:
@@ -366,7 +358,6 @@ class MainFrame(wx.Frame):
         self.search_box.Enable()
         self.search_box.SetFocus()  # Ensure search box is focused
         self.results_list.Enable()
-        self.export_btn.Enable()
         tag_list = [
             "work", "personal", "family", "finance", "travel", "urgent", "spam"
         ]
@@ -436,75 +427,58 @@ class MainFrame(wx.Frame):
             if hasattr(self, '_filtered_results') and self._filtered_results and idx < len(self._filtered_results):
                 hit = self._filtered_results[idx]
                 if isinstance(hit, dict):
-                    labels = hit.get('labels', '')
-                    labels_list = labels.split(',') if labels else []
-                    # Display headers in typical order: From, To, Date, Subject, Message-ID, Labels
-                    content = (
-                        f"From: {hit.get('sender', '')}\n"
-                        f"To: {hit.get('recipients', '')}\n"
-                        f"Date: {hit.get('date', '')}\n"
-                        f"Subject: {hit.get('subject', '')}\n"
-                        f"Message-ID: {hit.get('message_id', '')}\n"
-                        f"Labels: {', '.join(labels_list)}\n\n"
-                        f"{hit.get('body', '')}"
-                    )
-                    self.message_view.SetValue(content)
-                    self.mark_btn.Disable()
-                    self.tag_btn.Disable()
+                    self.show_message_content(hit)
                     return
             # Fallback to regular message display if no search results
             filter_labels = self.enabled_labels
             filtered = self.messages if not filter_labels else self.messages.filter_by_labels(filter_labels)
             msg = filtered[idx]
             self.show_message_content(msg)
-            self.mark_btn.Enable()
-            self.tag_btn.Enable()
         else:
             self.message_view.SetValue("")
-            self.mark_btn.Disable()
-            self.tag_btn.Disable()
 
     def show_message_content(self, msg):
-        content = (
-            f"From: {msg.sender}\n"
-            f"To: {', '.join(msg.recipients)}\n"
-            f"Date: {msg.date}\n"
-            f"Subject: {msg.subject}\n"
-            f"Message-ID: {getattr(msg, 'msg_id', '')}\n"
-            f"Tags: {', '.join(sorted(msg.labels))}\n\n"
-            f"{msg.body}"
-        )
-        self.message_view.SetValue(content)
-
-    def on_mark(self, event):
-        idx = self.results_list.GetSelection()
-        if idx != wx.NOT_FOUND:
-            filter_labels = self.enabled_labels
-            filtered = self.messages if not filter_labels else self.messages.filter_by_labels(filter_labels)
-            msg = filtered[idx]
-            msg.toggle_marked()
-            self.show_message_list()
-            self.results_list.SetSelection(idx)
-
-    def on_export(self, event):
-        wx.MessageBox("Exporting marked messages (not implemented)", "Export", wx.OK | wx.ICON_INFORMATION)
-
-    def on_tag(self, event):
-        idx = self.results_list.GetSelection()
-        if idx != wx.NOT_FOUND:
-            filter_labels = self.enabled_labels
-            filtered = self.messages if not filter_labels else self.messages.filter_by_labels(filter_labels)
-            msg = filtered[idx]
-            if self.enabled_labels:
-                label = next(iter(self.enabled_labels))
-                if label in msg.labels:
-                    msg.remove_label(label)
-                else:
-                    msg.add_label(label)
-                self.show_message_list()
-                self.results_list.SetSelection(idx)
-                self.show_message_content(msg)
-            self.update_label_badges()
+        # Always show headers
+        if isinstance(msg, dict):
+            labels = msg.get('labels', '')
+            labels_list = labels.split(',') if labels else []
+            headers = (
+                f"From: {msg.get('sender', '')}\n"
+                f"To: {msg.get('recipients', '')}\n"
+                f"Date: {msg.get('date', '')}\n"
+                f"Subject: {msg.get('subject', '')}\n"
+                f"Message-ID: {msg.get('message_id', '')}\n"
+                f"Labels: {', '.join(labels_list)}\n\n"
+            )
+            if self.show_highlights and self.query_engine:
+                message_id = msg.get('message_id')
+                query = self.search_box.GetValue().strip()
+                highlights = self.query_engine.highlights(message_id=message_id, query_str=query)
+                if highlights:
+                    content = headers + '\n\n'.join(highlights)
+                    self.message_view.SetValue(content)
+                    return
+            content = headers + msg.get('body', '')
+            self.message_view.SetValue(content)
+        else:
+            headers = (
+                f"From: {msg.sender}\n"
+                f"To: {', '.join(msg.recipients)}\n"
+                f"Date: {msg.date}\n"
+                f"Subject: {msg.subject}\n"
+                f"Message-ID: {getattr(msg, 'msg_id', '')}\n"
+                f"Tags: {', '.join(sorted(msg.labels))}\n\n"
+            )
+            if self.show_highlights and self.query_engine:
+                message_id = getattr(msg, 'msg_id', None)
+                query = self.search_box.GetValue().strip() if hasattr(self, 'search_box') else None
+                highlights = self.query_engine.highlights(message_id=message_id, query_str=query)
+                if highlights:
+                    content = headers + '\n\n'.join(highlights)
+                    self.message_view.SetValue(content)
+                    return
+            content = headers + msg.body
+            self.message_view.SetValue(content)
 
     def update_label_badges(self) -> None:
         for child in self.tag_panel.GetChildren():
@@ -552,9 +526,6 @@ class MainFrame(wx.Frame):
     def disable_all(self):
         self.search_box.Disable()
         self.results_list.Disable()
-        self.export_btn.Disable()
-        self.mark_btn.Disable()
-        self.tag_btn.Disable()
         self.message_view.SetValue("")
 
     def on_close(self, event):
@@ -574,6 +545,13 @@ class MainFrame(wx.Frame):
         # Show the search guide dialog (non-modal)
         dlg = SearchGuideDialog(self)
         dlg.Show()  # Non-modal
+
+    def on_toggle_highlights_menu(self, event):
+        self.show_highlights = self.highlights_menu_item.IsChecked()
+        # Refresh message view if a message is selected
+        idx = self.results_list.GetSelection()
+        if idx != wx.NOT_FOUND:
+            self.on_select_message(None)
 
     def on_search(self, event):
         query = self.search_box.GetValue().strip()

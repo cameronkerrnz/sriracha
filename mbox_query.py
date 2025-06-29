@@ -48,6 +48,47 @@ class MBoxQuery:
             return sorted(data.keys(), key=lambda s: s.lower())
         return []
 
+    def highlights(self, message_id: Optional[str] = None, docnum: Optional[int] = None, query_str: Optional[str] = None, field: str = "body", top: int = 10) -> Optional[List[str]]:
+        """
+        Return highlighted fragments for a message given its message_id or docnum and a query string.
+        :param message_id: The Message-ID of the message (preferred if available).
+        :param docnum: The Whoosh docnum (if known).
+        :param query_str: The search query string to highlight terms for.
+        :param field: The field to highlight (default: body).
+        :param top: The number of top fragments to return.
+        :return: List of highlighted fragments, or None if not found or no highlights.
+        """
+        from whoosh.highlight import UppercaseFormatter
+        if not query_str:
+            return None
+        with self.ix.searcher() as searcher:
+            parser = MultifieldParser(self.default_fields, schema=self.ix.schema, group=OrGroup)
+            query = parser.parse(query_str)
+            if message_id is not None:
+                results = searcher.search(query, limit=None)
+                results.formatter = UppercaseFormatter()
+                for hit in results:
+                    if hit.get("message_id") == message_id:
+                        fragments = hit.highlights(field, top=top, text=hit.get(field, None))
+                        if fragments:
+                            return [fragments]
+                        else:
+                            return None
+                return None
+            elif docnum is not None:
+                doc = searcher.stored_fields(docnum)
+                results = searcher.search(query, limit=None)
+                for hit in results:
+                    if hit.docnum == docnum:
+                        fragments = hit.highlights(field, top=top, text=hit.get(field, None))
+                        if fragments:
+                            return [fragments]
+                        else:
+                            return None
+                return None
+            else:
+                return None
+
 if __name__ == "__main__":
 
     from whoosh.highlight import Formatter, get_text
