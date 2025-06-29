@@ -346,15 +346,26 @@ class MainFrame(wx.Frame):
         idx = self.results_list.GetSelection()
         if idx != wx.NOT_FOUND:
             # Use search results if present
-            msg = None
             if hasattr(self, '_search_results') and self._search_results and idx < len(self._search_results):
                 hit = self._search_results[idx]
-                # Compose a message-like display from hit
-                content = f"Subject: {hit.get('subject', '')}\nFrom: {hit.get('sender', '')}\nTo: {hit.get('recipients', '')}\nDate: {hit.get('date', '')}\nLabels: {hit.get('X-Gmail-Labels', '')}\n\n{hit.get('body', '')}"
-                self.message_view.SetValue(content)
-                self.mark_btn.Disable()
-                self.tag_btn.Disable()
-                return
+                # Defensive: ensure hit is a dict, not a list
+                if isinstance(hit, dict):
+                    labels = hit.get('labels', '')
+                    labels_list = labels.split(',') if labels else []
+                    content = (
+                        f"Subject: {hit.get('subject', '')}\n"
+                        f"From: {hit.get('sender', '')}\n"
+                        f"To: {hit.get('recipients', '')}\n"
+                        f"Date: {hit.get('date', '')}\n"
+                        f"Labels: {', '.join(labels_list)}\n"
+                        f"Key: {hit.get('msg_key', '')}\n"
+                        f"MBOX Message Extents: {hit.get('mbox_message_extents', '')}\n\n"
+                        f"{hit.get('body', '')}"
+                    )
+                    self.message_view.SetValue(content)
+                    self.mark_btn.Disable()
+                    self.tag_btn.Disable()
+                    return
             # Fallback to regular message display if no search results
             filter_labels = self.enabled_labels
             filtered = self.messages if not filter_labels else self.messages.filter_by_labels(filter_labels)
@@ -468,11 +479,11 @@ class MainFrame(wx.Frame):
         except Exception as e:
             self.set_status(f"Query error: {e}")
             return
-        display = [f"{'* ' if hit.get('marked', False) else ''}{hit.get('subject', '')} [{hit.get('sender', '')}]" for hit in results]
+        # Store results for selection, as list of dicts
+        self._search_results = results
+        display = [f"{'* ' if r.get('marked', False) else ''}{r.get('subject', '')} [{r.get('sender', '')}]" for r in results]
         self.results_list.Set(display)
         self.set_status(f"Search results for: {query} ({len(results)} found)")
-        # Optionally, store results for selection
-        self._search_results = results
 
     def on_rebuild_index_menu(self, event):
         if self.mbox_path:
