@@ -43,7 +43,8 @@ class MBoxIndexer(threading.Thread):
             mbox_file=ID(stored=True),
             msg_key=ID(stored=True, unique=True),
             mbox_message_extents=STORED(),
-            labels=KEYWORD(stored=True, commas=True, lowercase=True, scorable=True)
+            labels=KEYWORD(stored=True, commas=True, lowercase=True, scorable=True),
+            message_id=ID(stored=True)
         )
 
 
@@ -117,6 +118,7 @@ class MBoxIndexer(threading.Thread):
                 sender = decode_header_value(msg.get('from', ''))
                 recipients = decode_header_value(msg.get('to', ''))
                 date = decode_header_value(msg.get('date', ''))
+                message_id = decode_header_value(msg.get('message-id', ''))
                 try:
                     date_parsed = parsedate_to_datetime(date) if date else None
                 except Exception:
@@ -154,7 +156,8 @@ class MBoxIndexer(threading.Thread):
                     mbox_file=os.path.basename(mbox_path),
                     msg_key=f"{os.path.basename(mbox_path)}:{key}",
                     mbox_message_extents=mbox_message_extents,
-                    labels=",".join(sorted(labels))
+                    labels=",".join(sorted(labels)),
+                    message_id=message_id
                 )
                 processed += 1
                 # Progress: use file offset if available

@@ -117,6 +117,47 @@ class MessageCollection:
                     counts[label] += 1
         return counts
 
+class SearchGuideDialog(wx.Dialog):
+    def __init__(self, parent):
+        super().__init__(parent, title="Search Guide", style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
+        self.SetSize(wx.Size(540, 420))
+        panel = wx.Panel(self)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        guide = (
+            "Search Guide for Desktop Picnic\n\n"
+            "You can search emails using keywords or field-specific queries.\n\n"
+            "Fielded search examples (case-insensitive):\n"
+            "  subject:invoice\n"
+            "  sender:alice@example.com\n"
+            "  recipients:bob@example.com\n"
+            "  date:2025-06-28\n"
+            "  message_id:<CAF1234@example.com>\n"
+            "  labels:work\n"
+            "  body:meeting\n\n"
+            "Combine terms with AND, OR, NOT (or use - for NOT):\n"
+            "  subject:invoice AND sender:alice\n"
+            "  subject:invoice OR subject:receipt\n"
+            "  -labels:spam\n\n"
+            "Phrase search: \"project update\"\n"
+            "Wildcard: subject:inv*\n"
+            "Date range: date:[2025-06-01 TO 2025-06-30]\n\n"
+            "Examples:\n"
+            "  message_id:<CAF1234@example.com>\n"
+            "  subject:report AND labels:finance\n"
+            "  sender:bob@example.com AND -labels:spam\n"
+            "  date:[2025-06-01 TO 2025-06-15] AND subject:meeting\n\n"
+            "Fields: subject, sender, recipients, date, message_id, labels, body\n\n"
+            "Tip: Message-ID must include angle brackets if present in the header."
+        )
+        text = wx.TextCtrl(panel, value=guide, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_DONTWRAP)
+        text.SetFont(wx.Font(11, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+        vbox.Add(text, proportion=1, flag=wx.EXPAND|wx.ALL, border=10)
+        btn = wx.Button(panel, wx.ID_OK, "Close")
+        vbox.Add(btn, flag=wx.ALIGN_RIGHT|wx.ALL, border=10)
+        btn.Bind(wx.EVT_BUTTON, lambda evt: self.Destroy())
+        panel.SetSizer(vbox)
+        self.CentreOnParent()
+
 class MainFrame(wx.Frame):
     def __init__(self, parent, title: str, mbox_path: Optional[str] = None):
         super().__init__(parent, title=title, size=wx.Size(1200, 700))
@@ -144,12 +185,15 @@ class MainFrame(wx.Frame):
         # Help menu
         help_menu = wx.Menu()
         about_item = help_menu.Append(wx.ID_ABOUT, "&About\tF1", "About Desktop Picnic")
+        search_guide_id = wx.NewIdRef()
+        search_guide_item = help_menu.Append(search_guide_id, "Search Guide", "Show search syntax guide")
         menubar.Append(help_menu, "&Help")
         self.SetMenuBar(menubar)
         self.Bind(wx.EVT_MENU, self.on_open_menu, open_item)
         self.Bind(wx.EVT_MENU, self.on_rebuild_index_menu, rebuild_item)
         self.Bind(wx.EVT_MENU, self.on_quit_menu, quit_item)
         self.Bind(wx.EVT_MENU, self.on_about_menu, about_item)
+        self.Bind(wx.EVT_MENU, self.on_search_guide_menu, search_guide_item)
 
         panel = wx.Panel(self)
         vbox = wx.BoxSizer(wx.VERTICAL)
@@ -394,12 +438,13 @@ class MainFrame(wx.Frame):
                 if isinstance(hit, dict):
                     labels = hit.get('labels', '')
                     labels_list = labels.split(',') if labels else []
-                    # Display headers in typical order: From, To, Cc, Bcc, Date, Subject, Labels
+                    # Display headers in typical order: From, To, Date, Subject, Message-ID, Labels
                     content = (
                         f"From: {hit.get('sender', '')}\n"
                         f"To: {hit.get('recipients', '')}\n"
                         f"Date: {hit.get('date', '')}\n"
                         f"Subject: {hit.get('subject', '')}\n"
+                        f"Message-ID: {hit.get('message_id', '')}\n"
                         f"Labels: {', '.join(labels_list)}\n\n"
                         f"{hit.get('body', '')}"
                     )
@@ -425,6 +470,7 @@ class MainFrame(wx.Frame):
             f"To: {', '.join(msg.recipients)}\n"
             f"Date: {msg.date}\n"
             f"Subject: {msg.subject}\n"
+            f"Message-ID: {getattr(msg, 'msg_id', '')}\n"
             f"Tags: {', '.join(sorted(msg.labels))}\n\n"
             f"{msg.body}"
         )
@@ -524,6 +570,11 @@ class MainFrame(wx.Frame):
     def on_about_menu(self, event):
         wx.MessageBox("Desktop Picnic\nA desktop MBOX search tool\n\u00A9 2025", "About Desktop Picnic", wx.OK | wx.ICON_INFORMATION)
 
+    def on_search_guide_menu(self, event):
+        # Show the search guide dialog (non-modal)
+        dlg = SearchGuideDialog(self)
+        dlg.Show()  # Non-modal
+
     def on_search(self, event):
         query = self.search_box.GetValue().strip()
         if not query or not self.query_engine:
@@ -545,6 +596,7 @@ class MainFrame(wx.Frame):
             self.open_mbox_path(self.mbox_path, force_rebuild=True)
         else:
             wx.MessageBox("No MBOX file is currently open.", "Rebuild Index", wx.OK | wx.ICON_INFORMATION)
+
 
 class DesktopPicnicApp(wx.App):
     def OnInit(self):
