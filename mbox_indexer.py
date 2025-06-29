@@ -7,6 +7,8 @@ from whoosh.index import create_in, open_dir
 from whoosh.analysis import StemmingAnalyzer
 from email.message import Message as EmailMessage
 from email.utils import parsedate_to_datetime
+from email.header import decode_header, make_header
+from email.parser import Parser
 import logging
 import json
 
@@ -88,6 +90,11 @@ class MBoxIndexer(threading.Thread):
                     return
                 if self.message_callback:
                     self.message_callback(mbox_path, i, msg)
+                # Parse headers using email.parser for proper unfolding and decoding
+                if not isinstance(msg, EmailMessage):
+                    # Defensive: parse raw message if not already EmailMessage
+                    raw = mbox.get_string(key)
+                    msg = Parser().parsestr(raw)
                 # Aggregate X-Gmail-Labels for this message
                 label_headers = msg.get_all('X-Gmail-Labels', [])
                 import re
@@ -98,10 +105,18 @@ class MBoxIndexer(threading.Thread):
                         if label:
                             aggregate_label_counts[label] = aggregate_label_counts.get(label, 0) + 1
                             labels.add(label)
-                subject = msg.get('subject', '')
-                sender = msg.get('from', '')
-                recipients = msg.get('to', '')
-                date = msg.get('date', '')
+                # Properly decode headers
+                def decode_header_value(val):
+                    if not val:
+                        return ''
+                    try:
+                        return str(make_header(decode_header(val)))
+                    except Exception:
+                        return val
+                subject = decode_header_value(msg.get('subject', ''))
+                sender = decode_header_value(msg.get('from', ''))
+                recipients = decode_header_value(msg.get('to', ''))
+                date = decode_header_value(msg.get('date', ''))
                 try:
                     date_parsed = parsedate_to_datetime(date) if date else None
                 except Exception:
@@ -139,7 +154,7 @@ class MBoxIndexer(threading.Thread):
                     mbox_file=os.path.basename(mbox_path),
                     msg_key=f"{os.path.basename(mbox_path)}:{key}",
                     mbox_message_extents=mbox_message_extents,
-                    labels=",".join(sorted(labels))  # Add labels as a comma-separated string
+                    labels=",".join(sorted(labels))
                 )
                 processed += 1
                 # Progress: use file offset if available
