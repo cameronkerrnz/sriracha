@@ -394,14 +394,13 @@ class MainFrame(wx.Frame):
                 if isinstance(hit, dict):
                     labels = hit.get('labels', '')
                     labels_list = labels.split(',') if labels else []
+                    # Display headers in typical order: From, To, Cc, Bcc, Date, Subject, Labels
                     content = (
-                        f"Subject: {hit.get('subject', '')}\n"
                         f"From: {hit.get('sender', '')}\n"
                         f"To: {hit.get('recipients', '')}\n"
                         f"Date: {hit.get('date', '')}\n"
-                        f"Labels: {', '.join(labels_list)}\n"
-                        f"Key: {hit.get('msg_key', '')}\n"
-                        f"MBOX Message Extents: {hit.get('mbox_message_extents', '')}\n\n"
+                        f"Subject: {hit.get('subject', '')}\n"
+                        f"Labels: {', '.join(labels_list)}\n\n"
                         f"{hit.get('body', '')}"
                     )
                     self.message_view.SetValue(content)
@@ -421,7 +420,14 @@ class MainFrame(wx.Frame):
             self.tag_btn.Disable()
 
     def show_message_content(self, msg):
-        content = f"Subject: {msg.subject}\nFrom: {msg.sender}\nTo: {', '.join(msg.recipients)}\nDate: {msg.date}\nTags: {', '.join(sorted(msg.labels))}\n\n{msg.body}"
+        content = (
+            f"From: {msg.sender}\n"
+            f"To: {', '.join(msg.recipients)}\n"
+            f"Date: {msg.date}\n"
+            f"Subject: {msg.subject}\n"
+            f"Tags: {', '.join(sorted(msg.labels))}\n\n"
+            f"{msg.body}"
+        )
         self.message_view.SetValue(content)
 
     def on_mark(self, event):
