@@ -169,31 +169,44 @@ class MainFrame(wx.Frame):
         # Use proportion=0 so tag_panel resizes and pushes down the rest of the layout
         vbox.Add(self.tag_panel, proportion=0, flag=wx.ALL|wx.EXPAND, border=5)
 
-        hbox_main = wx.BoxSizer(wx.HORIZONTAL)
-        self.results_list = wx.ListBox(panel)
+        # Main horizontal splitter: message list (left) and message view/actions (right)
+        self.splitter = wx.SplitterWindow(panel, style=wx.SP_LIVE_UPDATE)
+        self.splitter.SetMinimumPaneSize(100)
+
+        # Left: results list
+        left_panel = wx.Panel(self.splitter)
+        left_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.results_list = wx.ListBox(left_panel)
         self.results_list.Bind(wx.EVT_LISTBOX, self.on_select_message)
         self.results_list.Disable()
-        hbox_main.Add(self.results_list, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
+        left_sizer.Add(self.results_list, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
+        left_panel.SetSizer(left_sizer)
 
-        right_panel = wx.BoxSizer(wx.VERTICAL)
-        self.message_view = wx.TextCtrl(panel, style=wx.TE_MULTILINE|wx.TE_READONLY)
-        right_panel.Add(self.message_view, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
+        # Right: message view and actions
+        right_panel = wx.Panel(self.splitter)
+        right_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.message_view = wx.TextCtrl(right_panel, style=wx.TE_MULTILINE|wx.TE_READONLY)
+        right_sizer.Add(self.message_view, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
         hbox_actions = wx.BoxSizer(wx.HORIZONTAL)
-        self.mark_btn = wx.Button(panel, label="Mark/Unmark")
+        self.mark_btn = wx.Button(right_panel, label="Mark/Unmark")
         self.mark_btn.Bind(wx.EVT_BUTTON, self.on_mark)
         self.mark_btn.Disable()
         hbox_actions.Add(self.mark_btn, flag=wx.ALL, border=5)
-        self.export_btn = wx.Button(panel, label="Export Marked")
+        self.export_btn = wx.Button(right_panel, label="Export Marked")
         self.export_btn.Bind(wx.EVT_BUTTON, self.on_export)
         self.export_btn.Disable()
         hbox_actions.Add(self.export_btn, flag=wx.ALL, border=5)
-        self.tag_btn = wx.Button(panel, label="Apply/Clear Tag")
+        self.tag_btn = wx.Button(right_panel, label="Apply/Clear Tag")
         self.tag_btn.Bind(wx.EVT_BUTTON, self.on_tag)
         self.tag_btn.Disable()
         hbox_actions.Add(self.tag_btn, flag=wx.ALL, border=5)
-        right_panel.Add(hbox_actions, flag=wx.ALIGN_LEFT)
-        hbox_main.Add(right_panel, proportion=2, flag=wx.EXPAND)
-        vbox.Add(hbox_main, proportion=1, flag=wx.EXPAND)
+        right_sizer.Add(hbox_actions, flag=wx.ALIGN_LEFT)
+        right_panel.SetSizer(right_sizer)
+
+        # Add panels to splitter
+        self.splitter.SplitVertically(left_panel, right_panel, sashPosition=int(self.GetSize().GetWidth() * 0.33))
+
+        vbox.Add(self.splitter, proportion=1, flag=wx.EXPAND)
 
         # Status bar at the bottom
         status_hbox = wx.BoxSizer(wx.HORIZONTAL)
@@ -340,15 +353,28 @@ class MainFrame(wx.Frame):
         self.set_status(f"Filtering by labels: {', '.join(sorted(filter_labels))}")
 
     def filter_results_by_labels(self):
-        self.show_message_list()
+        # If using search results, filter them by enabled_labels
+        if hasattr(self, '_search_results') and self._search_results:
+            filtered = []
+            for hit in self._search_results:
+                labels = hit.get('labels', '')
+                labels_set = set(l.strip() for l in labels.split(',') if l.strip())
+                if not self.enabled_labels or (labels_set & self.enabled_labels):
+                    filtered.append(hit)
+            display = [f"{'* ' if r.get('marked', False) else ''}{r.get('subject', '')} [{r.get('sender', '')}]" for r in filtered]
+            self.results_list.Set(display)
+            self._filtered_results = filtered
+            self.set_status(f"Filtering by labels: {', '.join(sorted(self.enabled_labels))} ({len(filtered)} shown)")
+        else:
+            # Fallback to in-memory MessageCollection
+            self.show_message_list()
 
     def on_select_message(self, event):
         idx = self.results_list.GetSelection()
         if idx != wx.NOT_FOUND:
-            # Use search results if present
-            if hasattr(self, '_search_results') and self._search_results and idx < len(self._search_results):
-                hit = self._search_results[idx]
-                # Defensive: ensure hit is a dict, not a list
+            # Use filtered search results if present
+            if hasattr(self, '_filtered_results') and self._filtered_results and idx < len(self._filtered_results):
+                hit = self._filtered_results[idx]
                 if isinstance(hit, dict):
                     labels = hit.get('labels', '')
                     labels_list = labels.split(',') if labels else []
@@ -481,9 +507,8 @@ class MainFrame(wx.Frame):
             return
         # Store results for selection, as list of dicts
         self._search_results = results
-        display = [f"{'* ' if r.get('marked', False) else ''}{r.get('subject', '')} [{r.get('sender', '')}]" for r in results]
-        self.results_list.Set(display)
-        self.set_status(f"Search results for: {query} ({len(results)} found)")
+        self._filtered_results = results  # Initially, all results are shown
+        self.filter_results_by_labels()
 
     def on_rebuild_index_menu(self, event):
         if self.mbox_path:
