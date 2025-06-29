@@ -7,8 +7,7 @@ from pubsub import pub  # Use pypubsub instead
 from collections.abc import MutableSet
 from typing import Any, Iterable, Iterator, Optional, Set, List
 from mbox_indexer import MBoxIndexer
-from whoosh.fields import Schema, TEXT, ID, DATETIME, STORED
-from whoosh.analysis import StemmingAnalyzer
+from mbox_query import MBoxQuery
 
 class OrderedSet(MutableSet):
     def __init__(self, iterable: Optional[Iterable[Any]] = None):
@@ -126,6 +125,7 @@ class MainFrame(wx.Frame):
         self.messages: MessageCollection = MessageCollection()
         self.enabled_labels: Set[str] = set()
         self.aggregate_label_counts: dict[str, int] = {}
+        self.query_engine: Optional[MBoxQuery] = None
         self.init_ui()
         pub.subscribe(self.update_progress, 'update_progress')
         self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -235,6 +235,7 @@ class MainFrame(wx.Frame):
             self.export_btn.Enable()
             self.enabled_labels = set(self.aggregate_label_counts.keys())
             self.update_label_badges()
+            self.query_engine = MBoxQuery(index_dir)
             return
         self.set_status(f"Indexing {os.path.basename(path)}...")
         self.progress.SetValue(0)
@@ -256,20 +257,9 @@ class MainFrame(wx.Frame):
                 wx.CallAfter(self.progress.Hide)
         def message_callback(mbox_path: str, idx: int, msg):
             pass
-        schema = Schema(
-            subject=TEXT(stored=True, analyzer=StemmingAnalyzer()),
-            sender=TEXT(stored=True),
-            recipients=TEXT(stored=True),
-            date=DATETIME(stored=True),
-            body=TEXT(stored=True, analyzer=StemmingAnalyzer()),
-            mbox_file=ID(stored=True),
-            msg_key=ID(stored=True, unique=True),
-            mbox_message_extents=STORED()
-        )
         self.indexer = MBoxIndexer(
             mbox_files=mbox_files,
             index_dir=index_dir,
-            schema=schema,
             progress_callback=progress_callback,
             message_callback=message_callback,
             status_callback=status_callback
@@ -285,6 +275,8 @@ class MainFrame(wx.Frame):
             if self.mbox_path:
                 self.set_status(f"Indexed: {os.path.basename(self.mbox_path)}")
                 self.SetTitle(f"Desktop Picnic — {os.path.basename(self.mbox_path)}")
+            if os.path.exists(index_dir):
+                self.query_engine = MBoxQuery(index_dir)
             self.progress.Hide()
         def wait_for_indexer():
             if self.indexer.is_alive():
@@ -353,6 +345,17 @@ class MainFrame(wx.Frame):
     def on_select_message(self, event):
         idx = self.results_list.GetSelection()
         if idx != wx.NOT_FOUND:
+            # Use search results if present
+            msg = None
+            if hasattr(self, '_search_results') and self._search_results and idx < len(self._search_results):
+                hit = self._search_results[idx]
+                # Compose a message-like display from hit
+                content = f"Subject: {hit.get('subject', '')}\nFrom: {hit.get('sender', '')}\nTo: {hit.get('recipients', '')}\nDate: {hit.get('date', '')}\nLabels: {hit.get('X-Gmail-Labels', '')}\n\n{hit.get('body', '')}"
+                self.message_view.SetValue(content)
+                self.mark_btn.Disable()
+                self.tag_btn.Disable()
+                return
+            # Fallback to regular message display if no search results
             filter_labels = self.enabled_labels
             filtered = self.messages if not filter_labels else self.messages.filter_by_labels(filter_labels)
             msg = filtered[idx]
@@ -455,11 +458,21 @@ class MainFrame(wx.Frame):
         wx.MessageBox("Desktop Picnic\nA desktop MBOX search tool\n\u00A9 2025", "About Desktop Picnic", wx.OK | wx.ICON_INFORMATION)
 
     def on_search(self, event):
-        query = self.search_box.GetValue().lower()
-        filtered = MessageCollection([msg for msg in self.messages if query in msg.subject.lower() or query in msg.body.lower()])
-        display = [f"{'* ' if msg.marked else ''}{msg.subject} [{', '.join(sorted(msg.labels))}]" for msg in filtered]
+        query = self.search_box.GetValue().strip()
+        if not query or not self.query_engine:
+            self.set_status("No query or index loaded.")
+            return
+        # Use MBoxQuery to get results
+        try:
+            results = self.query_engine.search(query, limit=100)
+        except Exception as e:
+            self.set_status(f"Query error: {e}")
+            return
+        display = [f"{'* ' if hit.get('marked', False) else ''}{hit.get('subject', '')} [{hit.get('sender', '')}]" for hit in results]
         self.results_list.Set(display)
-        self.set_status(f"Search results for: {query}")
+        self.set_status(f"Search results for: {query} ({len(results)} found)")
+        # Optionally, store results for selection
+        self._search_results = results
 
     def on_rebuild_index_menu(self, event):
         if self.mbox_path:

@@ -2,7 +2,7 @@ import os
 import threading
 from typing import Callable, List, Optional, Any, Dict
 import mailbox
-from whoosh.fields import Schema
+from whoosh.fields import Schema, TEXT, ID, DATETIME, STORED, KEYWORD
 from whoosh.index import create_in, open_dir
 from whoosh.analysis import StemmingAnalyzer
 from email.message import Message as EmailMessage
@@ -18,7 +18,6 @@ class MBoxIndexer(threading.Thread):
         self,
         mbox_files: List[str],
         index_dir: str,
-        schema: Schema,
         progress_callback: Optional[Callable[[str, int, int], None]] = None,
         message_callback: Optional[Callable[[str, int, EmailMessage], None]] = None,
         status_callback: Optional[Callable[[str], None]] = None,
@@ -27,12 +26,24 @@ class MBoxIndexer(threading.Thread):
         super().__init__()
         self.mbox_files = mbox_files
         self.index_dir = index_dir
-        self.schema = schema
         self.progress_callback = progress_callback
         self.message_callback = message_callback
         self.status_callback = status_callback
         self.extra = extra or {}
         self._stop_event = threading.Event()
+
+        self.schema = Schema(
+            subject=TEXT(stored=True, analyzer=StemmingAnalyzer()),
+            sender=TEXT(stored=True),
+            recipients=TEXT(stored=True),
+            date=DATETIME(stored=True),
+            body=TEXT(stored=True, analyzer=StemmingAnalyzer()),
+            mbox_file=ID(stored=True),
+            msg_key=ID(stored=True, unique=True),
+            mbox_message_extents=STORED(),
+            labels=KEYWORD(stored=True, commas=True, lowercase=True, scorable=True)
+        )
+
 
     def stop(self) -> None:
         self._stop_event.set()
@@ -80,11 +91,13 @@ class MBoxIndexer(threading.Thread):
                 # Aggregate X-Gmail-Labels for this message
                 label_headers = msg.get_all('X-Gmail-Labels', [])
                 import re
+                labels = set()
                 for header in label_headers:
                     for label in header.split(','):
                         label = re.sub(r'\s+', ' ', label).strip()
                         if label:
                             aggregate_label_counts[label] = aggregate_label_counts.get(label, 0) + 1
+                            labels.add(label)
                 subject = msg.get('subject', '')
                 sender = msg.get('from', '')
                 recipients = msg.get('to', '')
@@ -125,7 +138,8 @@ class MBoxIndexer(threading.Thread):
                     body=body,
                     mbox_file=os.path.basename(mbox_path),
                     msg_key=f"{os.path.basename(mbox_path)}:{key}",
-                    mbox_message_extents=mbox_message_extents
+                    mbox_message_extents=mbox_message_extents,
+                    labels=",".join(sorted(labels))  # Add labels as a comma-separated string
                 )
                 processed += 1
                 # Progress: use file offset if available
@@ -154,8 +168,6 @@ if __name__ == "__main__":
     import sys
     import time
     import logging
-    from whoosh.fields import Schema, TEXT, ID, DATETIME, STORED
-    from whoosh.analysis import StemmingAnalyzer
     from collections import Counter
 
     # Configure logging for the CLI
@@ -163,18 +175,6 @@ if __name__ == "__main__":
         level=logging.INFO,
         format='[%(asctime)s] %(levelname)s %(name)s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
-    )
-
-    # Define a schema similar to the experiment
-    schema = Schema(
-        subject=TEXT(stored=True, analyzer=StemmingAnalyzer()),
-        sender=TEXT(stored=True),
-        recipients=TEXT(stored=True),
-        date=DATETIME(stored=True),
-        body=TEXT(stored=True, analyzer=StemmingAnalyzer()),
-        mbox_file=ID(stored=True),
-        msg_key=ID(stored=True, unique=True),
-        mbox_message_extents=STORED()
     )
 
     if len(sys.argv) < 3:
@@ -210,7 +210,6 @@ if __name__ == "__main__":
     indexer = MBoxIndexer(
         mbox_files=mbox_files,
         index_dir=index_dir,
-        schema=schema,
         progress_callback=progress_callback,
         message_callback=message_callback,
         status_callback=status_callback

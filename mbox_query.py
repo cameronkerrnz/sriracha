@@ -118,7 +118,11 @@ if __name__ == "__main__":
                 date = hit.get("date", "")
                 recipients = hit.get("recipients", "")
                 msg_key = hit.get("msg_key", "")
+                labels = hit.get("labels", "").split(",") if hit.get("labels") else []
                 print(f"[{i}] {date} | {subj[:60]}")
                 print(f"    From: {sender} | To: {recipients}")
                 print(f"    Key: {msg_key}")
+                print(f"    Labels: {', '.join(labels)}")
+                print(f"    MBOX Message Extents: {hit.get('mbox_message_extents')}")
                 print(f"    {hit.highlights('body', top=2, )}\n")
+                print("" + "-" * 80)
