@@ -415,9 +415,7 @@ class MainFrame(wx.Frame):
             btn.SetValue(label in self.enabled_labels)
             btn.Bind(wx.EVT_TOGGLEBUTTON, lambda evt, l=label: self.on_toggle_label(evt, l))
             btn.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
-            # Autosize: let wxPython determine the best size
-            btn.SetMinSize(wx.Size(60, 24))
-            btn.SetMaxSize(wx.Size(180, 24))
+            btn.SetToolTip(f"Filter by label: {tooltip_label}")
             self.tag_sizer.Add(btn, flag=wx.RIGHT|wx.BOTTOM, border=4)
         self.tag_panel.Layout()
         self.tag_panel.Fit()
