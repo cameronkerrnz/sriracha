@@ -6,83 +6,87 @@ on:
       - '**'
 
 jobs:
-#   build-macos:
-#     runs-on: macos-latest
-#     steps:
-#       - uses: actions/checkout@v4
-#       - name: Set up Python 3.13
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: '3.13'
-#       - name: Install dependencies
-#         run: |
-#           python -m pip install --upgrade pip
-#           pip install pyinstaller
-#       - name: Rebuild macOS App Icon
-#         run: |
-#           mkdir -p packaging/icon.iconset
-#           sips -z 512 512 packaging/appicon.png --out packaging/icon.iconset/icon_512x512.png
-#           iconutil -c icns packaging/icon.iconset -o packaging/appicon.icns
-#       - name: Build with PyInstaller
-#         run: pyinstaller --noconfirm --clean sriracha.spec
-#       - name: Create DMG
-#         run: |
-#           hdiutil create -volname Sriracha -srcfolder dist/sriracha.app -ov -format UDZO dist/Sriracha.dmg
-#       - name: Upload DMG Artifact
-#         uses: actions/upload-artifact@v4
-#         with:
-#           name: Sriracha-macOS
-#           path: dist/Sriracha.dmg
-
-#   build-windows:
-#     runs-on: windows-latest
-#     steps:
-#       - uses: actions/checkout@v4
-#       - name: Set up Python 3.13
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: '3.13'
-#       - name: Install dependencies
-#         run: |
-#           python -m pip install --upgrade pip
-#           pip install pyinstaller
-#       - name: Build with PyInstaller
-#         run: pyinstaller --noconfirm --clean sriracha.spec
-#       - name: Upload EXE Artifact
-#         uses: actions/upload-artifact@v4
-#         with:
-#           name: Sriracha-Windows
-#           path: dist/sriracha/sriracha.exe
-
-  build-linux:
-    runs-on: ubuntu-latest
+  build-macos:
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install AppImage tools
-        run: |
-          sudo apt update
-          sudo apt install -y libfuse2
-          wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
-          chmod +x appimagetool
-          ./appimagetool --appimage-extract
-          sudo mv squashfs-root /opt/appimagetool
       - name: Install dependencies
         run: |
-            python -m pip install --upgrade pip
-            pip install pyinstaller
-      - name: Build with PyInstaller
-        run: pyinstaller --noconfirm --clean sriracha.spec
-      - name: Package as AppImage
+          python -m pip venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Rebuild macOS App Icon
         run: |
-          find
-          export PATH="/opt/appimagetool/usr/bin:$PATH"
-          ./appimagetool AppDir MyApp-x86_64.AppImage
-      - name: Upload AppImage Artifact
+          mkdir -p packaging/icon.iconset
+          sips -z 512 512 packaging/appicon.png --out packaging/icon.iconset/icon_512x512.png
+          iconutil -c icns packaging/icon.iconset -o packaging/appicon.icns
+      - name: Build with PyInstaller
+        run: |
+          source .venv/bin/activate
+          pyinstaller --noconfirm --clean sriracha.spec
+      - name: Create DMG
+        run: |
+          hdiutil create -volname Sriracha -srcfolder dist/sriracha.app -ov -format UDZO dist/Sriracha.dmg
+      - name: Upload DMG Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sriracha-Linux
-          path: '*.AppImage'
+          name: Sriracha-macOS
+          path: dist/Sriracha.dmg
+
+  # build-windows:
+  #   runs-on: windows-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Set up Python 3.13
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.13'
+  #     - name: Install dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install pyinstaller
+  #     - name: Build with PyInstaller
+  #       run: pyinstaller --noconfirm --clean sriracha.spec
+  #     - name: Upload EXE Artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: Sriracha-Windows
+  #         path: dist/sriracha/sriracha.exe
+
+  # build-linux:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Set up Python 3.13
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.13'
+  #     - name: Install AppImage tools
+  #       run: |
+  #         sudo apt update
+  #         sudo apt install -y libfuse2
+  #         wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+  #         chmod +x appimagetool
+  #         ./appimagetool --appimage-extract
+  #         sudo mv squashfs-root /opt/appimagetool
+  #     - name: Install dependencies
+  #       run: |
+  #           python -m pip install --upgrade pip
+  #           pip install pyinstaller
+  #     - name: Build with PyInstaller
+  #       run: pyinstaller --noconfirm --clean sriracha.spec
+  #     - name: Package as AppImage
+  #       run: |
+  #         find
+  #         export PATH="/opt/appimagetool/usr/bin:$PATH"
+  #         ./appimagetool AppDir MyApp-x86_64.AppImage
+  #     - name: Upload AppImage Artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: Sriracha-Linux
+  #         path: '*.AppImage'
