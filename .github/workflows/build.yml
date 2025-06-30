@@ -16,9 +16,8 @@ jobs:
           python-version: '3.13'
       - name: Install dependencies
         run: |
-          python -m pip venv .venv
+          python -m venv .venv
           source .venv/bin/activate
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Rebuild macOS App Icon
         run: |
