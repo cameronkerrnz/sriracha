@@ -3,6 +3,7 @@ import wx
 import os
 import threading
 import json
+import multiprocessing
 from pubsub import pub  # Use pypubsub instead
 from collections.abc import MutableSet
 from typing import Any, Iterable, Iterator, Optional, Set, List
@@ -598,6 +599,7 @@ class SrirachaApp(wx.App):
         return True
 
 def main():
+    multiprocessing.freeze_support()
     app = SrirachaApp(False)
     app.MainLoop()
 
