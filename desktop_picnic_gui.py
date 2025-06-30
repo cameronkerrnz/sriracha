@@ -234,15 +234,29 @@ class MainFrame(wx.Frame):
         left_sizer.Add(self.results_list, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
         left_panel.SetSizer(left_sizer)
 
-        # Right: message view and actions
-        right_panel = wx.Panel(self.splitter)
-        right_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.message_view = wx.TextCtrl(right_panel, style=wx.TE_MULTILINE|wx.TE_READONLY)
-        right_sizer.Add(self.message_view, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
-        right_panel.SetSizer(right_sizer)
+        # Right: vertical splitter for headers and body
+        right_splitter = wx.SplitterWindow(self.splitter, style=wx.SP_LIVE_UPDATE)
+        right_splitter.SetMinimumPaneSize(40)
 
-        # Add panels to splitter
-        self.splitter.SplitVertically(left_panel, right_panel, sashPosition=int(self.GetSize().GetWidth() * 0.33))
+        # Top: message headers
+        headers_panel = wx.Panel(right_splitter)
+        headers_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.headers_view = wx.TextCtrl(headers_panel, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_DONTWRAP|wx.BORDER_NONE)
+        self.headers_view.SetMinSize(wx.Size(-1, 60))  # Minimum height for headers
+        headers_sizer.Add(self.headers_view, proportion=1, flag=wx.EXPAND|wx.ALL, border=0)
+        headers_panel.SetSizer(headers_sizer)
+
+        # Bottom: message body
+        body_panel = wx.Panel(right_splitter)
+        body_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.message_view = wx.TextCtrl(body_panel, style=wx.TE_MULTILINE|wx.TE_READONLY)
+        body_sizer.Add(self.message_view, proportion=1, flag=wx.EXPAND|wx.ALL, border=0)
+        body_panel.SetSizer(body_sizer)
+
+        # Add panels to right splitter (vertical)
+        right_splitter.SplitHorizontally(headers_panel, body_panel, sashPosition=100)
+        # Add panels to main splitter (horizontal)
+        self.splitter.SplitVertically(left_panel, right_splitter, sashPosition=int(self.GetSize().GetWidth() * 0.33))
 
         vbox.Add(self.splitter, proportion=1, flag=wx.EXPAND)
 
@@ -438,7 +452,7 @@ class MainFrame(wx.Frame):
             self.message_view.SetValue("")
 
     def show_message_content(self, msg):
-        # Always show headers
+        # Always show headers in the headers_view, body in message_view
         if isinstance(msg, dict):
             labels = msg.get('labels', '')
             labels_list = labels.split(',') if labels else []
@@ -448,18 +462,17 @@ class MainFrame(wx.Frame):
                 f"Date: {msg.get('date', '')}\n"
                 f"Subject: {msg.get('subject', '')}\n"
                 f"Message-ID: {msg.get('message_id', '')}\n"
-                f"Labels: {', '.join(labels_list)}\n\n"
+                f"Labels: {', '.join(labels_list)}"
             )
+            self.headers_view.SetValue(headers)
             if self.show_highlights and self.query_engine:
                 message_id = msg.get('message_id')
                 query = self.search_box.GetValue().strip()
                 highlights = self.query_engine.highlights(message_id=message_id, query_str=query)
                 if highlights:
-                    content = headers + '\n\n'.join(highlights)
-                    self.message_view.SetValue(content)
+                    self.message_view.SetValue('\n\n'.join(highlights))
                     return
-            content = headers + msg.get('body', '')
-            self.message_view.SetValue(content)
+            self.message_view.SetValue(msg.get('body', ''))
         else:
             headers = (
                 f"From: {msg.sender}\n"
@@ -467,18 +480,17 @@ class MainFrame(wx.Frame):
                 f"Date: {msg.date}\n"
                 f"Subject: {msg.subject}\n"
                 f"Message-ID: {getattr(msg, 'msg_id', '')}\n"
-                f"Tags: {', '.join(sorted(msg.labels))}\n\n"
+                f"Tags: {', '.join(sorted(msg.labels))}"
             )
+            self.headers_view.SetValue(headers)
             if self.show_highlights and self.query_engine:
                 message_id = getattr(msg, 'msg_id', None)
                 query = self.search_box.GetValue().strip() if hasattr(self, 'search_box') else None
                 highlights = self.query_engine.highlights(message_id=message_id, query_str=query)
                 if highlights:
-                    content = headers + '\n\n'.join(highlights)
-                    self.message_view.SetValue(content)
+                    self.message_view.SetValue('\n\n'.join(highlights))
                     return
-            content = headers + msg.body
-            self.message_view.SetValue(content)
+            self.message_view.SetValue(msg.body)
 
     def update_label_badges(self) -> None:
         for child in self.tag_panel.GetChildren():
