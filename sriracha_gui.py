@@ -124,7 +124,7 @@ class SearchGuideDialog(wx.Dialog):
         panel = wx.Panel(self)
         vbox = wx.BoxSizer(wx.VERTICAL)
         guide = (
-            "Search Guide for Desktop Picnic\n\n"
+            "Search Guide for Sriracha\n\n"
             "You can search emails using keywords or field-specific queries.\n\n"
             "Fielded search examples (case-insensitive):\n"
             "  subject:invoice\n"
@@ -181,7 +181,7 @@ class MainFrame(wx.Frame):
         open_item = file_menu.Append(wx.ID_OPEN, "&Open...\tCtrl+O", "Open MBOX file")
         rebuild_index_id = wx.NewIdRef()
         rebuild_item = file_menu.Append(rebuild_index_id, "Rebuild &Index", "Rebuild the index for the current MBOX file")
-        quit_item = file_menu.Append(wx.ID_EXIT, "&Quit\tCtrl+Q", "Quit Desktop Picnic")
+        quit_item = file_menu.Append(wx.ID_EXIT, "&Quit\tCtrl+Q", "Quit Sriracha")
         menubar.Append(file_menu, "&File")
         # View menu
         view_menu = wx.Menu()
@@ -191,7 +191,7 @@ class MainFrame(wx.Frame):
         menubar.Append(view_menu, "&View")
         # Help menu
         help_menu = wx.Menu()
-        about_item = help_menu.Append(wx.ID_ABOUT, "&About\tF1", "About Desktop Picnic")
+        about_item = help_menu.Append(wx.ID_ABOUT, "&About\tF1", "About Sriracha")
         search_guide_id = wx.NewIdRef()
         search_guide_item = help_menu.Append(search_guide_id, "Search Guide", "Show search syntax guide")
         menubar.Append(help_menu, "&Help")
@@ -276,7 +276,7 @@ class MainFrame(wx.Frame):
 
     def open_mbox_path(self, path, force_rebuild: bool = False):
         self.mbox_path = path
-        self.SetTitle(f"Desktop Picnic — {os.path.basename(path)}")
+        self.SetTitle(f"Sriracha — {os.path.basename(path)}")
         mbox_dir = os.path.dirname(path)
         mbox_base = os.path.splitext(os.path.basename(path))[0]
         index_dir = os.path.join(mbox_dir, mbox_base + ".whoosh-index")
@@ -338,7 +338,7 @@ class MainFrame(wx.Frame):
             self.update_label_badges()
             if self.mbox_path:
                 self.set_status(f"Indexed: {os.path.basename(self.mbox_path)}")
-                self.SetTitle(f"Desktop Picnic — {os.path.basename(self.mbox_path)}")
+                self.SetTitle(f"Sriracha — {os.path.basename(self.mbox_path)}")
             if os.path.exists(index_dir):
                 self.query_engine = MBoxQuery(index_dir)
             self.progress.Hide()
@@ -391,7 +391,7 @@ class MainFrame(wx.Frame):
         self.update_label_badges()
         if self.mbox_path:
             self.set_status(f"Indexed: {os.path.basename(self.mbox_path)}")
-            self.SetTitle(f"Desktop Picnic — {os.path.basename(self.mbox_path)}")
+            self.SetTitle(f"Sriracha — {os.path.basename(self.mbox_path)}")
         self.show_message_list()
 
     def show_message_list(self, filter_labels=None):
@@ -551,7 +551,7 @@ class MainFrame(wx.Frame):
         self.Close()
 
     def on_about_menu(self, event):
-        wx.MessageBox("Desktop Picnic\nA desktop MBOX search tool\n\u00A9 2025", "About Desktop Picnic", wx.OK | wx.ICON_INFORMATION)
+        wx.MessageBox("Sriracha\nA desktop MBOX search tool\n\u00A9 2025", "About Sriracha", wx.OK | wx.ICON_INFORMATION)
 
     def on_search_guide_menu(self, event):
         # Show the search guide dialog (non-modal)
@@ -588,17 +588,17 @@ class MainFrame(wx.Frame):
             wx.MessageBox("No MBOX file is currently open.", "Rebuild Index", wx.OK | wx.ICON_INFORMATION)
 
 
-class DesktopPicnicApp(wx.App):
+class SrirachaApp(wx.App):
     def OnInit(self):
         mbox_path = None
         if len(sys.argv) > 1:
             mbox_path = sys.argv[1]
-        self.frame = MainFrame(None, "Desktop Picnic", mbox_path=mbox_path)
+        self.frame = MainFrame(None, "Sriracha", mbox_path=mbox_path)
         self.frame.Show()
         return True
 
 def main():
-    app = DesktopPicnicApp(False)
+    app = SrirachaApp(False)
     app.MainLoop()
 
 if __name__ == "__main__":

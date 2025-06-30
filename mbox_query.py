@@ -5,7 +5,7 @@ from whoosh.qparser import MultifieldParser, OrGroup
 from whoosh.query import Query
 from whoosh.searching import Results
 
-class MBoxQuery:
+class SrirachaQuery:
     """
     Provides a query/search interface for indexed MBOX files using Whoosh.
     """
@@ -94,12 +94,10 @@ if __name__ == "__main__":
     from whoosh.highlight import Formatter, get_text
 
     class BeforeAfterFormatter(Formatter):
-
         def __init__(self, before, after, between="..."):
             """
             :param between: the text to add between fragments.
             """
-
             self.before = before
             self.after = after
             self.between = between
@@ -112,8 +110,9 @@ if __name__ == "__main__":
 
     import sys
     index_dir = sys.argv[1] if len(sys.argv) > 1 else "."
-    query_engine = MBoxQuery(index_dir)
+    query_engine = SrirachaQuery(index_dir)
     print(f"Loaded index from: {index_dir}")
+    print("Welcome to Sriracha!")
     print("Commands:")
     print("  :labels   - List all unique labels")
     print("  :help     - Show this help message")

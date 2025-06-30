@@ -1,4 +1,4 @@
-# Desktop Picnic
+# Sriracha
 
 This is a desktop application which will allow a user to index and quickly
 search the content in an email MBOX archive from Google Mail, as downloaded
