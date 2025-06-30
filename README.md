@@ -1,4 +1,4 @@
-# Sriracha
+# Sriracha - Makes Takeout Better
 
 Sriracha is a fast desktop email viewer for large mbox archives. It is designed for power users, researchers, and anyone who needs to search, filter, and explore large email collections efficiently.
 
