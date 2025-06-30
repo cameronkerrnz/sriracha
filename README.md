@@ -29,7 +29,7 @@ To run the app from source:
 
 ```bash
 source .venv/bin/activate
-python sriracha_gui.py
+python src/sriracha_gui.py
 ```
 
 ## Building the App
@@ -37,7 +37,7 @@ python sriracha_gui.py
 To build a standalone app (macOS):
 
 ```bash
-pyinstaller --windowed sriracha_gui.spec
+pyinstaller packaging/sriracha_gui.spec
 ```
 
 

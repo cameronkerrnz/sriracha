@@ -5,7 +5,7 @@ from whoosh.qparser import MultifieldParser, OrGroup
 from whoosh.query import Query
 from whoosh.searching import Results
 
-class SrirachaQuery:
+class MBoxQuery:
     """
     Provides a query/search interface for indexed MBOX files using Whoosh.
     """
