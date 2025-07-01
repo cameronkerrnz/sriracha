@@ -85,10 +85,13 @@ jobs:
         run: |
           python -m venv .venv
           source .venv/bin/activate
+          pip install -U \
+            -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-24.04 \
+            wxPython
           pip install -r requirements.txt
       - name: Create application icon
         run: |
-          magick convert packaging/sriracha.png -resize 256x256 packaging/linux/appimage/sriracha.png
+          convert packaging/sriracha.png -resize 256x256 packaging/linux/appimage/sriracha.png
       - name: Build with PyInstaller
         run: |
           source .venv/bin/activate
