@@ -30,7 +30,7 @@ exe = EXE(
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
-    icon='packaging/appicon.png',
+    icon=None,
 )
 coll = COLLECT(
     exe,
