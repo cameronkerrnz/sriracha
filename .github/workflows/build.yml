@@ -66,7 +66,7 @@ jobs:
       - name: Install AppImage tools
         run: |
           sudo apt update
-          sudo apt install -y libfuse2 image-magick
+          sudo apt install -y libfuse2 imagemagick
           wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
           chmod +x appimagetool
       - name: Install dependencies
