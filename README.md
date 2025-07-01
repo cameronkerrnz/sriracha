@@ -55,3 +55,15 @@ Instructions for contributing to the project.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Developer Prerequisites
+
+- Python 3.13 (recommended)
+- [ImageMagick](https://imagemagick.org/) (required for generating Windows .ico icons from PNG)
+    - On macOS: `brew install imagemagick`
+    - On Linux: `sudo apt install imagemagick`
+    - On Windows: Download from the official site and add to PATH
+- (macOS only) Xcode command line tools (for iconutil and sips)
+- (Linux only) AppImage tools if you want to build AppImage packages
+
+See `.vscode/tasks.json` for platform-specific build and icon generation tasks.
