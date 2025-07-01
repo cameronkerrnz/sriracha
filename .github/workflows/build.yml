@@ -8,6 +8,10 @@ on:
 jobs:
   build-macos:
     runs-on: macos-latest
+    if: |
+      github.event.head_commit.message == null ||
+      contains(github.event.head_commit.message, '[build-macos]') ||
+      !contains(github.event.head_commit.message, '[build-')
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.13
@@ -34,6 +38,10 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    if: |
+      github.event.head_commit.message == null ||
+      contains(github.event.head_commit.message, '[build-windows]') ||
+      !contains(github.event.head_commit.message, '[build-')
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.13
@@ -57,6 +65,10 @@ jobs:
 
   build-linux:
     runs-on: ubuntu-latest
+    if: |
+      github.event.head_commit.message == null ||
+      contains(github.event.head_commit.message, '[build-linux]') ||
+      !contains(github.event.head_commit.message, '[build-')
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.13
@@ -66,7 +78,7 @@ jobs:
       - name: Install AppImage tools
         run: |
           sudo apt update
-          sudo apt install -y libfuse2 imagemagick
+          sudo apt install -y libfuse2 imagemagick libgtk-3-dev
           wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
           chmod +x appimagetool
       - name: Install dependencies
