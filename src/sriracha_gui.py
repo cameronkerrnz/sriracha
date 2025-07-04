@@ -184,6 +184,11 @@ class MainFrame(wx.Frame):
         rebuild_item = file_menu.Append(rebuild_index_id, "Rebuild &Index", "Rebuild the index for the current MBOX file")
         quit_item = file_menu.Append(wx.ID_EXIT, "&Quit\tCtrl+Q", "Quit Sriracha")
         menubar.Append(file_menu, "&File")
+        # Message menu
+        message_menu = wx.Menu()
+        export_eml_id = wx.NewIdRef()
+        export_eml_item = message_menu.Append(export_eml_id, "&Export as *.eml file...\tCtrl-E", "Export selected message as .eml file")
+        menubar.Append(message_menu, "&Message")
         # View menu
         view_menu = wx.Menu()
         self.highlights_menu_id = wx.NewIdRef()
@@ -203,6 +208,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_about_menu, about_item)
         self.Bind(wx.EVT_MENU, self.on_search_guide_menu, search_guide_item)
         self.Bind(wx.EVT_MENU, self.on_toggle_highlights_menu, self.highlights_menu_item)
+        self.Bind(wx.EVT_MENU, self.on_export_eml_menu, export_eml_item)
 
         panel = wx.Panel(self)
         vbox = wx.BoxSizer(wx.VERTICAL)
@@ -587,6 +593,49 @@ class MainFrame(wx.Frame):
             self.open_mbox_path(self.mbox_path, force_rebuild=True)
         else:
             wx.MessageBox("No MBOX file is currently open.", "Rebuild Index", wx.OK | wx.ICON_INFORMATION)
+
+
+    def on_export_eml_menu(self, event):
+        idx = self.results_list.GetSelection()
+        if idx == wx.NOT_FOUND:
+            wx.MessageBox("No message selected.", "Export as EML", wx.OK | wx.ICON_INFORMATION)
+            return
+        # Get the selected message (from filtered results if present)
+        msg = None
+        if hasattr(self, '_filtered_results') and self._filtered_results and idx < len(self._filtered_results):
+            hit = self._filtered_results[idx]
+            if isinstance(hit, dict):
+                msg = hit
+        if not msg:
+            wx.MessageBox("No message selected or message type unsupported.", "Export as EML", wx.OK | wx.ICON_INFORMATION)
+            return
+        # Get mbox file and extents from hit
+        mbox_file = msg.get('mbox_file')
+        extents = msg.get('mbox_message_extents')
+        if not mbox_file or not extents or not self.query_engine:
+            wx.MessageBox("Message does not have mbox file/extents information.", "Export as EML", wx.OK | wx.ICON_INFORMATION)
+            return
+        # Compute the absolute path to the mbox file relative to the index directory's parent
+        if self.query_engine and hasattr(self.query_engine.ix, 'storage'):
+            index_dir = self.query_engine.ix.storage.folder
+            mbox_path = os.path.join(os.path.dirname(index_dir), mbox_file)
+        else:
+            mbox_path = mbox_file
+        # Ask user for save location
+        with wx.FileDialog(self, "Export as EML", wildcard="EML files (*.eml)|*.eml|All files (*.*)|*.*", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT, defaultFile="message.eml") as fileDialog:
+            fileDialog.SetFilterIndex(0)  # Ensure '*.eml' is the default
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return
+            save_path = fileDialog.GetPath()
+        # Use the query engine to extract the raw message
+        try:
+            email_msg = self.query_engine.extract_message_by_extents(mbox_path, tuple(extents))
+            # Write as raw RFC822
+            with open(save_path, 'wb') as f:
+                f.write(email_msg.as_bytes())
+            wx.MessageBox(f"Message exported to {save_path}", "Export as EML", wx.OK | wx.ICON_INFORMATION)
+        except Exception as e:
+            wx.MessageBox(f"Failed to export message: {e}", "Export as EML", wx.OK | wx.ICON_ERROR)
 
 
 class SrirachaApp(wx.App):

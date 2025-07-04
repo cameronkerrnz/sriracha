@@ -4,6 +4,7 @@ from whoosh.index import open_dir
 from whoosh.qparser import MultifieldParser, OrGroup
 from whoosh.query import Query
 from whoosh.searching import Results
+from email.message import EmailMessage
 
 class MBoxQuery:
     """
@@ -89,6 +90,27 @@ class MBoxQuery:
             else:
                 return None
 
+    def extract_message_by_extents(self, mbox_path: str, extents: tuple) -> 'EmailMessage':
+        """
+        Given a path to an mbox file and a (start, stop) tuple, seek to the start,
+        read the correct number of bytes, and return the message as an EmailMessage.
+        The extents should include the 'From ' line and the full message.
+        """
+        from email.parser import BytesParser
+        from email.policy import default
+        start, stop = extents
+        with open(mbox_path, 'rb') as f:
+            f.seek(start)
+            raw_bytes = f.read(stop - start)
+        # Parse as a full RFC822 message (including 'From ' line)
+        # Remove the 'From ' line if present, as email.parser expects headers to start immediately
+        if raw_bytes.startswith(b'From '):
+            first_nl = raw_bytes.find(b'\n')
+            if first_nl != -1:
+                raw_bytes = raw_bytes[first_nl+1:]
+        msg = BytesParser(policy=default).parsebytes(raw_bytes)
+        return msg
+
 if __name__ == "__main__":
 
     from whoosh.highlight import Formatter, get_text
@@ -110,7 +132,7 @@ if __name__ == "__main__":
 
     import sys
     index_dir = sys.argv[1] if len(sys.argv) > 1 else "."
-    query_engine = SrirachaQuery(index_dir)
+    query_engine = MBoxQuery(index_dir)
     print(f"Loaded index from: {index_dir}")
     print("Welcome to Sriracha!")
     print("Commands:")
