@@ -53,10 +53,17 @@ jobs:
           python -m venv .venv
           .venv/Scripts/activate
           pip install -r requirements.txt
+      - name: Install VC++ Redistributable
+        shell: powershell
+        run: |
+          $vcRedistUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+          $vcRedistPath = "$env:TEMP\vc_redist.x64.exe"
+          Invoke-WebRequest -Uri $vcRedistUrl -OutFile $vcRedistPath
+          Start-Process -FilePath $vcRedistPath -ArgumentList "/install", "/quiet", "/norestart" -Wait
       - name: Build with PyInstaller
         run: |
           .venv/Scripts/activate
-          pyinstaller --noconfirm --clean sriracha-windows.spec
+          pyinstaller --noconfirm sriracha-windows.spec
       - name: Upload EXE Artifact
         uses: actions/upload-artifact@v4
         with:
