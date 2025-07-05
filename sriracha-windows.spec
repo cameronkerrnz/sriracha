@@ -20,7 +20,7 @@ exe = EXE(
     pyz,
     a.scripts,
     [],
-    exclude_binaries=True,
+    exclude_binaries=False,
     name='sriracha',
     debug=False,
     bootloader_ignore_signals=False,
@@ -31,13 +31,5 @@ exe = EXE(
     argv_emulation=False,
     target_arch=None,
     icon='packaging/appicon.ico',
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='sriracha',
+    onefile=True,
 )
