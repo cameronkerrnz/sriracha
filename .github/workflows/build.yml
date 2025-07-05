@@ -61,7 +61,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Sriracha-Windows
-          path: dist/sriracha/sriracha.exe
+          path: sriracha/dist/sriracha.exe
 
   build-linux:
     runs-on: ubuntu-latest
