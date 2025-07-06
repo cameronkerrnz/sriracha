@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+
+Name=Sriracha
+Comment=Quickly search and export messages from MBOX archives such as Google Takeout
+Categories=Utility;Archiving;
+
+Icon=sriracha
+Exec=sriracha
+Terminal=false

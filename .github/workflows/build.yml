@@ -105,12 +105,14 @@ jobs:
           pyinstaller --noconfirm --clean sriracha-linux.spec
       - name: Package as AppImage
         run: |
-          find . -type d
-          mv dist/sriracha packaging/linux/appimage/Sriracha-AppDir/usr/bin/sriracha
-          export PATH="/opt/appimagetool/usr/bin:$PATH"
-          ./appimagetool packaging/linux/appimage/Sriracha-AppDir Sriracha-x86_64.AppImage
+          mkdir packaging/linux/appimage/Sriracha.AppDir/opt
+          mv dist/sriracha packaging/linux/appimage/Sriracha.AppDir/opt
+          convert packaging/appicon.png -resize 256x256 packaging/linux/appimage/sriracha.png
+          (cd packaging/linux/appimage/Sriracha.AppDir && ln -s opt/sriracha/sriracha AppRun)
+          (cd packaging/linux/appimage/Sriracha.AppDir && ln -s usr/share/applications/io.github.cameronkerr.sriracha.desktop .)
+          ./appimagetool packaging/linux/appimage/Sriracha.AppDir
       - name: Upload AppImage Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Sriracha-Linux
-          path: "*.AppImage"
+          path: "packaging/linux/appimage/Sriracha*.AppImage"

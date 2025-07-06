@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+	<id>io.github.cameronkerrnz.sriracha</id>
+	<metadata_license>CC0-1.0</metadata_license>
+	<project_license>GPL-3.0</project_license>
+	<name>Sriracha</name>
+	<summary>Quickly search and export messages from MBOX archives such as Google Takeout</summary>
+	<description>
+		<p>Google Takeout is a way to export data from Google Services. For Gmail data, the data is downloaded as large MBOX files which can be hard to use. It also typically means that users would need to import the messages in those MBOX archives into their own account, which is highly problematic in many scenarios, such as when searching email from past employees in order to answer financial or legal questions.</p>
+    <p>Sriracha is designed not to require any infrastructure, point it at an MBOX file, which can remain on a SMB share, it will index the data and allow the user to quickly search, filter and export messages as standard *.eml files, for use in the likes of Thunderbird, Mac Mail, Outlook and also (but less conveniently) Gmail.</p>
+    <p>Keep your auditors happy, and your data in one place. Sriracha: Makes Takeout Better</p>
+	</description>
+	<launchable type="desktop-id">io.github.cameronkerrnz.sriracha.desktop</launchable>
+	<url type="homepage">https://github.com/cameronkerrnz/sriracha/</url>
+	<provides>
+		<binary>sriracha</binary>
+	</provides>
+	<content_rating type="oars-1.1" />
+</component>
