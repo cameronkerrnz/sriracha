@@ -107,12 +107,12 @@ jobs:
         run: |
           mkdir packaging/linux/appimage/Sriracha.AppDir/opt
           mv dist/sriracha packaging/linux/appimage/Sriracha.AppDir/opt
-          convert packaging/appicon.png -resize 256x256 packaging/linux/appimage/sriracha.png
+          convert packaging/appicon.png -resize 256x256 packaging/linux/appimage/Sriracha.AppDir/sriracha.png
           (cd packaging/linux/appimage/Sriracha.AppDir && ln -s opt/sriracha/sriracha AppRun)
-          (cd packaging/linux/appimage/Sriracha.AppDir && ln -s usr/share/applications/io.github.cameronkerr.sriracha.desktop .)
+          (cd packaging/linux/appimage/Sriracha.AppDir && ln -s usr/share/applications/io.github.cameronkerrnz.sriracha.desktop .)
           ./appimagetool packaging/linux/appimage/Sriracha.AppDir
       - name: Upload AppImage Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Sriracha-Linux
-          path: "packaging/linux/appimage/Sriracha*.AppImage"
+          path: "Sriracha*.AppImage"
