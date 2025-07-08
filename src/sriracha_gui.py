@@ -25,6 +25,9 @@ from collections.abc import MutableSet
 from typing import Any, Iterable, Iterator, Optional, Set, List
 from mbox_indexer import MBoxIndexer
 from mbox_query import MBoxQuery
+from version_info import get_version_info
+
+APP_VERSION = get_version_info()
 
 class OrderedSet(MutableSet):
     def __init__(self, iterable: Optional[Iterable[Any]] = None):
@@ -575,7 +578,9 @@ class MainFrame(wx.Frame):
 
     def on_about_menu(self, event):
         wx.MessageBox(
-            "Sriracha\nA desktop MBOX search tool\n\n" +
+            f"Sriracha\nA desktop MBOX search tool\n\n" +
+            f"Version: {APP_VERSION}\n" +
+            "\n" +
             "Copyright (C) 2025 Cameron Kerr\n" +
             "\n" +
             "This program is free software: you can redistribute it and/or modify\n" +
