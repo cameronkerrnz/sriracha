@@ -9,3 +9,7 @@ All notable changes to this project will be documented in this file.
 - Fast indexing and search using Whoosh.
 - wxPython GUI with message export and label filtering.
 - AppImage, DMG, and Windows EXE builds via GitHub Actions.
+
+## [0.0.2] - 2025-07-09
+### Fixed
+- Label filter badges are now correctly updated and displayed after indexing completes, so users can filter by labels immediately after indexing.

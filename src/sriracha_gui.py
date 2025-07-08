@@ -356,6 +356,16 @@ class MainFrame(wx.Frame):
             status_callback=status_callback
         )
         def on_index_complete():
+            # Reload aggregate_label_counts from the new index
+            agg_path = os.path.join(index_dir, 'aggregate_labels.json')
+            if os.path.exists(agg_path):
+                try:
+                    with open(agg_path, 'r', encoding='utf-8') as f:
+                        self.aggregate_label_counts = json.load(f)
+                except Exception:
+                    self.aggregate_label_counts = {}
+            else:
+                self.aggregate_label_counts = {}
             self.index_exists = True
             self.search_box.Enable()
             self.search_box.SetFocus()  # Ensure search box is focused
