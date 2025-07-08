@@ -14,6 +14,24 @@ Sriracha is a fast desktop email viewer for large mbox archives. It will be of p
 
 **INDEX FORMAT WILL CHANGE:** This software is in early stages of development. While the MBOX source files will remain read-only, the index it creates (currently `<name>.whoosh-index` alongside the `<name>.mbox`) will change as new features are added, so don't expect to keep the indexes between versions. 
 
+## UNSIGNED SOFTWARE
+
+This version is not yet signed, so macOS and Windows will force you to take some explicit actions to make it runnable.
+
+If you don't understand the potential dangers of doing this, please ask your IT person.
+
+### macOS
+
+You'll need to clear the quarantine flag, which will prevent macOS from complaining about running an unsigned program downloaded from the internet.
+
+```sh
+xattr -d com.apple.quarantine Sriracha.app
+```
+
+### Windows
+
+(TODO)
+
 ## Interoperability
 
 ### Supported Platforms
