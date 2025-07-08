@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-14
     if: |
       github.event.head_commit.message == null ||
       contains(github.event.head_commit.message, '[build-macos]') ||
@@ -37,7 +37,7 @@ jobs:
           path: dist/Sriracha.dmg
 
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     if: |
       github.event.head_commit.message == null ||
       contains(github.event.head_commit.message, '[build-windows]') ||
@@ -71,7 +71,7 @@ jobs:
           path: dist/sriracha.exe
 
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: |
       github.event.head_commit.message == null ||
       contains(github.event.head_commit.message, '[build-linux]') ||
@@ -93,7 +93,7 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           pip install -U \
-            -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-24.04 \
+            -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-22.04 \
             wxPython
           pip install -r requirements.txt
       - name: Create application icon
