@@ -23,6 +23,11 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           pip install -r requirements.txt
+      - name: Bake version and commit into Python module
+        run: |
+          echo "# This file is auto-generated at build time. Do not edit manually." > src/_baked_version.py
+          echo "VERSION=\"$(cat VERSION)\"" >> src/_baked_version.py
+          echo "GIT_COMMIT=\"$(git rev-parse --short HEAD)\"" >> src/_baked_version.py
       - name: Build with PyInstaller
         run: |
           source .venv/bin/activate
@@ -60,6 +65,11 @@ jobs:
           $vcRedistPath = "$env:TEMP\vc_redist.x64.exe"
           Invoke-WebRequest -Uri $vcRedistUrl -OutFile $vcRedistPath
           Start-Process -FilePath $vcRedistPath -ArgumentList "/install", "/quiet", "/norestart" -Wait
+      - name: Bake version and commit into Python module
+        run: |
+          echo "# This file is auto-generated at build time. Do not edit manually." > src/_baked_version.py
+          echo "VERSION=\"$(cat VERSION)\"" >> src/_baked_version.py
+          echo "GIT_COMMIT=\"$(git rev-parse --short HEAD)\"" >> src/_baked_version.py
       - name: Build with PyInstaller
         run: |
           .venv/Scripts/activate
@@ -99,6 +109,11 @@ jobs:
       - name: Create application icon
         run: |
           convert packaging/sriracha.png -resize 256x256 packaging/linux/appimage/sriracha.png
+      - name: Bake version and commit into Python module
+        run: |
+          echo "# This file is auto-generated at build time. Do not edit manually." > src/_baked_version.py
+          echo "VERSION=\"$(cat VERSION)\"" >> src/_baked_version.py
+          echo "GIT_COMMIT=\"$(git rev-parse --short HEAD)\"" >> src/_baked_version.py
       - name: Build with PyInstaller
         run: |
           source .venv/bin/activate
