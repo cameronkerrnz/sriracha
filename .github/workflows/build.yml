@@ -191,3 +191,57 @@ jobs:
         with:
           name: Sriracha-Ubuntu-24-04
           path: "Sriracha*.AppImage"
+
+  test-ubuntu-24-04-appimage:
+    runs-on: ubuntu-24.04
+    needs: build-ubuntu-24-04
+    if: |
+      github.event.head_commit.message == null ||
+      (!contains(github.event.head_commit.message, '[no-ci]') && (
+        contains(github.event.head_commit.message, '[build-ubuntu-24-04]') ||
+        !contains(github.event.head_commit.message, '[build-')
+      ))
+    steps:
+      - name: Download AppImage Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Sriracha-Ubuntu-24-04
+          path: ./appimage-artifact
+
+      - name: Find AppImage file
+        id: find_appimage
+        run: |
+          APPIMAGE=$(find ./appimage-artifact -name '*.AppImage' | head -n1)
+          if [ -z "$APPIMAGE" ]; then
+            echo "No AppImage found!" >&2
+            exit 1
+          fi
+          echo "appimage_path=$APPIMAGE" >> $GITHUB_OUTPUT
+
+      - name: Install Xvfb and x11-apps
+        run: sudo apt-get update && sudo apt-get install -y xvfb x11-apps
+
+      - name: Make AppImage executable
+        run: chmod +x "${{ steps.find_appimage.outputs.appimage_path }}"
+
+      - name: Run AppImage in Xvfb and capture screenshot
+        run: |
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1280x800x24 &
+          XVFB_PID=$!
+          sleep 2
+          "${{ steps.find_appimage.outputs.appimage_path }}" > appimage_stdout.log 2> appimage_stderr.log &
+          APP_PID=$!
+          sleep 10
+          xwd -root -display :99 -out sriracha.xwd
+          kill $APP_PID || true
+          kill $XVFB_PID || true
+          cat appimage_stdout.log
+          cat appimage_stderr.log
+        shell: bash
+
+      - name: Upload screenshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sriracha-Ubuntu-24-04-Screenshot
+          path: sriracha.xwd
