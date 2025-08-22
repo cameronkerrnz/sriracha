@@ -221,6 +221,11 @@ jobs:
       - name: Install Xvfb and x11-apps
         run: sudo apt-get update && sudo apt-get install -y xvfb x11-apps
 
+      - name: Install Ubuntu Desktop environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ubuntu-desktop xvfb
+
       - name: Make AppImage executable
         run: chmod +x "${{ steps.find_appimage.outputs.appimage_path }}"
 
