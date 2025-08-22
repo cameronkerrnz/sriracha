@@ -219,11 +219,16 @@ jobs:
           echo "appimage_path=$APPIMAGE" >> $GITHUB_OUTPUT
 
       - name: Install required packages
-        run: sudo apt-get update && sudo apt-get install -y xvfb x11-apps libfuse2 libnotify4
+        run: sudo apt-get update && sudo apt-get install -y xvfb x11-apps libfuse2 libnotify4 libsdl2
 
 
       - name: Make AppImage executable
         run: chmod +x "${{ steps.find_appimage.outputs.appimage_path }}"
+
+      - name: Check unresolved libraries with ldd -r
+        run: |
+          echo "Checking unresolved libraries with ldd -r:"
+          ldd -r "${{ steps.find_appimage.outputs.appimage_path }}" || true
 
       - name: Run AppImage in Xvfb and capture screenshot
         run: |
