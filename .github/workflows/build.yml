@@ -219,7 +219,7 @@ jobs:
           echo "appimage_path=$APPIMAGE" >> $GITHUB_OUTPUT
 
       - name: Install required packages
-        run: sudo apt-get update && sudo apt-get install -y xvfb x11-apps libfuse2 libnotify4 libsdl2
+        run: sudo apt-get update && sudo apt-get install -y xvfb x11-apps libfuse2 libnotify4 libsdl2-2.0-0
 
 
       - name: Make AppImage executable
