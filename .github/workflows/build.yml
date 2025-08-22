@@ -218,8 +218,8 @@ jobs:
           fi
           echo "appimage_path=$APPIMAGE" >> $GITHUB_OUTPUT
 
-      - name: Install Xvfb and x11-apps
-        run: sudo apt-get update && sudo apt-get install -y xvfb x11-apps libfuse2
+      - name: Install required packages
+        run: sudo apt-get update && sudo apt-get install -y xvfb x11-apps libfuse2 libnotify4
 
 
       - name: Make AppImage executable
