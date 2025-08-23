@@ -4,7 +4,14 @@
 a = Analysis(
     ['src/sriracha_gui.py'],
     pathex=[],
-    binaries=[],
+    binaries=[
+        ('/usr/lib/x86_64-linux-gnu/libnotify.so.4', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libglib-2.0.so.0', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libgthread-2.0.so.0', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libgmodule-2.0.so.0', '.'),
+        ('/usr/lib/x86_64-linux-gnu/libgio-2.0.so.0', '.'),
+    ],
     datas=[],
     hiddenimports=[],
     hookspath=[],
