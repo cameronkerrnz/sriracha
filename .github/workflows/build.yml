@@ -124,6 +124,27 @@ jobs:
         run: |
           source .venv/bin/activate
           pyinstaller --noconfirm --clean sriracha-linux.spec
+      - name: List bundled files in PyInstaller dist directory
+        run: |
+          echo "PyInstaller bundled files:"
+          find dist/sriracha -type f -exec ls -lh {} +
+      - name: Bundle libnotify and glib into AppDir
+        run: |
+          APPDIR=packaging/linux/appimage/Sriracha.AppDir
+          mkdir -p "$APPDIR/usr/lib/"
+          # Copy libnotify and glib libraries and their symlinks
+          for lib in libnotify.so.4 libglib-2.0.so.0 libgobject-2.0.so.0 libgthread-2.0.so.0 libgmodule-2.0.so.0 libgio-2.0.so.0; do
+            src=$(ldconfig -p | grep $lib | head -n1 | awk '{print $4}')
+            if [ -n "$src" ]; then
+              cp -v --parents "$src" "$APPDIR/usr/lib/"
+              # Copy symlinks if any
+              for link in $(find /usr/lib/x86_64-linux-gnu/ -maxdepth 1 -name "$lib*"); do
+                [ -f "$link" ] && cp -v "$link" "$APPDIR/usr/lib/"
+              done
+            else
+              echo "$lib not found in ldconfig output" >&2
+            fi
+          done
       - name: Package as AppImage
         run: |
           mkdir packaging/linux/appimage/Sriracha.AppDir/opt
