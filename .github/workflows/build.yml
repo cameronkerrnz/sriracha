@@ -234,7 +234,8 @@ jobs:
             xkb-data \
             x11-apps \
             xvfb \
-
+            imagemagick \
+            fluxbox || sudo apt-get install -y openbox
 
       - name: Make AppImage executable
         run: chmod +x "${{ steps.find_appimage.outputs.appimage_path }}"
@@ -247,6 +248,10 @@ jobs:
           export KBD_DFAULT_LAYOUT=us
           Xvfb :99 -screen 0 1280x800x24 -xkbdir /usr/share/X11/xkb &
           XVFB_PID=$!
+          sleep 2
+          # Start window manager (fluxbox or openbox)
+          (fluxbox || openbox) &
+          WM_PID=$!
           sleep 2
           "${{ steps.find_appimage.outputs.appimage_path }}" &
           APP_PID=$!
@@ -266,6 +271,7 @@ jobs:
           xwd -root -display :99 -out sriracha.xwd
           convert sriracha.xwd sriracha.png
           kill $APP_PID || true
+          kill $WM_PID || true
           kill $XVFB_PID || true
         shell: bash
 
