@@ -1,0 +1,377 @@
+From alice@example.com Sat Jul 13 10:00:00 2024
+X-Gmail-Labels: Work,Important,Inbox,Unread,Starred
+Subject: Project Kickoff Meeting
+Date: Sat, 13 Jul 2024 10:00:00 +1200
+From: alice@example.com
+To: team@example.com
+Message-ID: <msg1@example.com>
+
+Hi team,
+
+We're excited to announce the kickoff meeting for the new project. Please join us on Monday at 10am in the main conference room.
+
+Best,
+Alice
+
+From noreply@airline.com Sat Jul 13 11:15:00 2024
+X-Gmail-Labels: Personal,Travel,Inbox,Unread
+Subject: Flight Booking Confirmation
+Date: Sat, 13 Jul 2024 11:15:00 +1200
+From: noreply@airline.com
+To: bob@example.com
+Message-ID: <msg2@example.com>
+
+Dear Bob,
+
+Your flight to Wellington has been confirmed. Please find your itinerary attached. Safe travels!
+
+Regards,
+Airline Team
+
+From statements@bank.com Sat Jul 13 12:30:00 2024
+X-Gmail-Labels: Finance,Receipts,Inbox,Opened,Important
+Subject: Your Monthly Bank Statement
+Date: Sat, 13 Jul 2024 12:30:00 +1200
+From: statements@bank.com
+To: carol@example.com
+Message-ID: <msg3@example.com>
+
+Hello Carol,
+
+Your monthly bank statement is now available. Log in to your account to view the details.
+
+Thank you for banking with us.
+
+From dave@example.com Sat Jul 13 13:45:00 2024
+X-Gmail-Labels: Family,Photos,Inbox,Opened,Starred
+Subject: Summer BBQ Photos
+Date: Sat, 13 Jul 2024 13:45:00 +1200
+From: dave@example.com
+To: family@example.com
+Message-ID: <msg4@example.com>
+
+Hi everyone,
+
+Sharing some great photos from last weekend's BBQ! Let me know if you want the originals.
+
+Cheers,
+Dave
+
+From emma@example.com Sat Jul 13 15:00:00 2024
+X-Gmail-Labels: Work,Updates,Inbox,Opened,Important
+Subject: Weekly Status Update
+Date: Sat, 13 Jul 2024 15:00:00 +1200
+From: emma@example.com
+To: alice@example.com
+Message-ID: <msg5@example.com>
+
+Hi Alice,
+
+Here's the weekly status update for the project. All milestones are on track and no blockers at this time.
+
+Best,
+Emma
+
+From sarah@newsletter.com Sat Jul 13 16:30:00 2024
+X-Gmail-Labels: Newsletters,Reading,Archived,Opened
+Subject: July Tech Digest
+Date: Sat, 13 Jul 2024 16:30:00 +1200
+From: sarah@newsletter.com
+To: alice@example.com
+Message-ID: <msg6@example.com>
+
+Hello Alice,
+
+Welcome to the July edition of Tech Digest! This month, we cover the latest trends in AI, cybersecurity, and cloud computing. Our featured article explores how small businesses are leveraging AI to improve productivity. Don’t miss our exclusive interview with Dr. Jane Smith, who shares her insights on the future of quantum computing.
+
+As always, we appreciate your feedback. Reply to this email with your thoughts or suggestions for future topics.
+
+Happy reading!
+Sarah
+
+From hr@company.com Sat Jul 13 17:45:00 2024
+X-Gmail-Labels: Work,HR,Inbox,Unread,Important
+Subject: Annual Leave Policy Update
+Date: Sat, 13 Jul 2024 17:45:00 +1200
+From: hr@company.com
+To: allstaff@company.com
+Message-ID: <msg7@example.com>
+
+Dear Team,
+
+We are pleased to announce updates to our annual leave policy, effective August 1st. Employees will now accrue an additional two days of paid leave per year. Please review the attached document for full details, including how to apply for leave and the updated carry-over policy.
+
+If you have any questions, contact the HR department or visit the company intranet for more information.
+
+Best regards,
+HR Department
+
+From laura@bookclub.org Sat Jul 13 19:00:00 2024
+X-Gmail-Labels: Personal,BookClub,Inbox,Opened
+Subject: Book Club - August Selection
+Date: Sat, 13 Jul 2024 19:00:00 +1200
+From: laura@bookclub.org
+To: members@bookclub.org
+Message-ID: <msg8@example.com>
+
+Hi everyone,
+
+Thanks for the lively discussion last week! For August, we’ve chosen “The Midnight Library” by Matt Haig. Please pick up a copy and join us for our next meeting on August 15th at 7pm. We’ll meet at the usual spot, but let me know if you have suggestions for a new venue.
+
+Also, feel free to bring a friend! As always, snacks and drinks will be provided.
+
+See you soon,
+Laura
+
+From support@onlineshop.com Sat Jul 13 20:15:00 2024
+X-Gmail-Labels: Receipts,Shopping,Inbox,Opened,Starred
+Subject: Your Order Has Shipped!
+Date: Sat, 13 Jul 2024 20:15:00 +1200
+From: support@onlineshop.com
+To: bob@example.com
+Message-ID: <msg9@example.com>
+
+Hello Bob,
+
+Good news! Your recent order #123456 has shipped and is on its way. You can track your package using the tracking number provided below. If you have any questions or need to change your delivery address, please contact our support team.
+
+Tracking Number: ZXCVBNM123456
+
+Thank you for shopping with us!
+Online Shop Support
+
+From principal@school.edu Sat Jul 13 21:30:00 2024
+X-Gmail-Labels: Family,School,Inbox,Unread,Important
+Subject: Parent-Teacher Conference Reminder
+Date: Sat, 13 Jul 2024 21:30:00 +1200
+From: principal@school.edu
+To: parents@school.edu
+Message-ID: <msg10@example.com>
+
+Dear Parents,
+
+This is a reminder that our annual parent-teacher conferences will be held next Thursday and Friday. Please sign up for a time slot using the online portal. These meetings are a valuable opportunity to discuss your child’s progress and address any concerns.
+
+If you are unable to attend, please contact your child’s teacher to arrange an alternative meeting time.
+
+Thank you for your continued support of our school community.
+
+Sincerely,
+Principal Smith
+From spammer1@scam.com Sat Jul 13 22:00:00 2024
+X-Gmail-Labels: Spam,Inbox,Unread
+Subject: You Won a Free Gift Card!
+Date: Sat, 13 Jul 2024 22:00:00 +1200
+From: spammer1@scam.com
+To: user@example.com
+Message-ID: <spam1@example.com>
+
+Congratulations! You have been selected to receive a $500 gift card. Click the link below to claim your prize now!
+
+Best wishes,
+The Prize Team
+
+From spammer2@phish.net Sat Jul 13 22:15:00 2024
+X-Gmail-Labels: Spam,Inbox,Unread
+Subject: Urgent: Account Verification Needed
+Date: Sat, 13 Jul 2024 22:15:00 +1200
+From: spammer2@phish.net
+To: user@example.com
+Message-ID: <spam2@example.com>
+
+Dear User,
+
+We noticed unusual activity in your account. Please verify your information immediately to avoid suspension.
+
+Sincerely,
+Account Security Team
+
+From spammer3@lottery.com Sat Jul 13 22:30:00 2024
+X-Gmail-Labels: Spam,Inbox,Unread
+Subject: Lottery Winner Notification
+Date: Sat, 13 Jul 2024 22:30:00 +1200
+From: spammer3@lottery.com
+To: user@example.com
+Message-ID: <spam3@example.com>
+
+You have won the international lottery! To claim your millions, reply with your full name and bank details.
+
+Good luck!
+Lottery Office
+
+From spammer4@fakebank.com Sat Jul 13 22:45:00 2024
+X-Gmail-Labels: Spam,Inbox,Unread
+Subject: Important Notice: Bank Account Locked
+Date: Sat, 13 Jul 2024 22:45:00 +1200
+From: spammer4@fakebank.com
+To: user@example.com
+Message-ID: <spam4@example.com>
+
+Dear Customer,
+
+Your bank account has been locked due to suspicious activity. Please log in using the link below to restore access.
+
+Thank you,
+FakeBank Support
+
+From spammer5@malware.biz Sat Jul 13 23:00:00 2024
+X-Gmail-Labels: Spam,Inbox,Unread
+Subject: Download the Latest Security Update
+Date: Sat, 13 Jul 2024 23:00:00 +1200
+From: spammer5@malware.biz
+To: user@example.com
+Message-ID: <spam5@example.com>
+
+Protect your computer from viruses! Download the attached update now to stay safe online.
+
+Best regards,
+Security Team
+From finance@company.com Sun Jul 14 08:00:00 2024
+X-Gmail-Labels: Finance,Inbox,Unread,Receipts
+Subject: Receipt for Payment - Invoice #2024-001
+Date: Sun, 14 Jul 2024 08:00:00 +1200
+From: finance@company.com
+To: alice@example.com
+Message-ID: <fin1@example.com>
+
+Dear Alice,
+
+Thank you for your payment of $1,200.00 for Invoice #2024-001. Attached is your receipt for your records. If you have any questions, please contact our accounts team.
+
+Best regards,
+Finance Department
+
+From alice@example.com Sun Jul 14 08:30:00 2024
+X-Gmail-Labels: Finance,Sent,Invoices
+Subject: Invoice Submission - July Consulting
+Date: Sun, 14 Jul 2024 08:30:00 +1200
+From: alice@example.com
+To: billing@client.com
+Message-ID: <fin2@example.com>
+
+Hello,
+
+Please find attached my invoice for consulting services provided in July. Let me know if you need any additional documentation or have questions about the charges.
+
+Thank you,
+Alice
+
+From payroll@company.com Sun Jul 14 09:00:00 2024
+X-Gmail-Labels: Finance,Inbox,Opened,Statements
+Subject: Your Monthly Payslip
+Date: Sun, 14 Jul 2024 09:00:00 +1200
+From: payroll@company.com
+To: bob@example.com
+Message-ID: <fin3@example.com>
+
+Dear Bob,
+
+Your payslip for July 2024 is now available. Please log in to the employee portal to view or download your statement. Contact HR if you have any questions about your pay.
+
+Regards,
+Payroll Team
+
+From carol@example.com Sun Jul 14 09:30:00 2024
+X-Gmail-Labels: Finance,Sent,Spreadsheets
+Subject: Q2 Expense Spreadsheet
+Date: Sun, 14 Jul 2024 09:30:00 +1200
+From: carol@example.com
+To: finance@company.com
+Message-ID: <fin4@example.com>
+
+Hi Finance Team,
+
+Attached is the Q2 expense spreadsheet for our department. Please review and let me know if you need any clarifications or supporting receipts.
+
+Thanks,
+Carol
+
+From billing@client.com Sun Jul 14 10:00:00 2024
+X-Gmail-Labels: Finance,Inbox,Invoices,Important
+Subject: Invoice #2024-002 Due Reminder
+Date: Sun, 14 Jul 2024 10:00:00 +1200
+From: billing@client.com
+To: alice@example.com
+Message-ID: <fin5@example.com>
+
+Dear Alice,
+
+This is a reminder that Invoice #2024-002 is due on July 20, 2024. Please ensure payment is made by the due date to avoid late fees. Let us know if you have already sent payment or need an updated invoice.
+
+Best,
+Billing Department
+
+From receipts@onlineshop.com Sun Jul 14 10:30:00 2024
+X-Gmail-Labels: Finance,Receipts,Inbox,Opened
+Subject: Your Purchase Receipt - Order #78910
+Date: Sun, 14 Jul 2024 10:30:00 +1200
+From: receipts@onlineshop.com
+To: bob@example.com
+Message-ID: <fin6@example.com>
+
+Hello Bob,
+
+Thank you for your recent purchase. Attached is your receipt for Order #78910. If you have any questions or need to return an item, please contact our support team.
+
+Sincerely,
+Online Shop
+
+From alice@example.com Sun Jul 14 11:00:00 2024
+X-Gmail-Labels: Finance,Sent,Invoices,Important
+Subject: Follow-up: Outstanding Invoice #2024-003
+Date: Sun, 14 Jul 2024 11:00:00 +1200
+From: alice@example.com
+To: billing@client.com
+Message-ID: <fin7@example.com>
+
+Hi,
+
+I am following up regarding Invoice #2024-003, which appears to be outstanding. Please let me know if there are any issues or if payment has already been processed.
+
+Thank you,
+Alice
+
+From finance@company.com Sun Jul 14 11:30:00 2024
+X-Gmail-Labels: Finance,Inbox,Statements,Opened
+Subject: Quarterly Financial Statement
+Date: Sun, 14 Jul 2024 11:30:00 +1200
+From: finance@company.com
+To: carol@example.com
+Message-ID: <fin8@example.com>
+
+Dear Carol,
+
+Please find attached the quarterly financial statement for your review. Let us know if you have any questions or require further breakdowns.
+
+Best regards,
+Finance Department
+
+From alice@example.com Sun Jul 14 12:00:00 2024
+X-Gmail-Labels: Finance,Sent,Spreadsheets
+Subject: Updated Budget Spreadsheet
+Date: Sun, 14 Jul 2024 12:00:00 +1200
+From: alice@example.com
+To: finance@company.com
+Message-ID: <fin9@example.com>
+
+Hi Finance,
+
+I've attached the updated budget spreadsheet reflecting the latest changes. Please confirm receipt and let me know if you need any further details.
+
+Thanks,
+Alice
+
+From payroll@company.com Sun Jul 14 12:30:00 2024
+X-Gmail-Labels: Finance,Inbox,Statements,Important
+Subject: Tax Summary for 2023/2024
+Date: Sun, 14 Jul 2024 12:30:00 +1200
+From: payroll@company.com
+To: bob@example.com
+Message-ID: <fin10@example.com>
+
+Dear Bob,
+
+Your tax summary for the 2023/2024 financial year is attached. Please review and keep it for your records. Contact us if you have any questions or notice any discrepancies.
+
+Regards,
+Payroll Team
