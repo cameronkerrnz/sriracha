@@ -84,12 +84,12 @@ jobs:
           name: Sriracha-Windows
           path: dist/sriracha.exe
 
-  build-linux:
+  build-ubuntu-22-04:
     runs-on: ubuntu-22.04
     if: |
       github.event.head_commit.message == null ||
       (!contains(github.event.head_commit.message, '[no-ci]') && (
-        contains(github.event.head_commit.message, '[build-linux]') ||
+        contains(github.event.head_commit.message, '[build-ubuntu-22-04]') ||
         !contains(github.event.head_commit.message, '[build-')
       ))
     steps:
@@ -101,7 +101,7 @@ jobs:
       - name: Install AppImage tools
         run: |
           sudo apt update
-          sudo apt install -y libfuse2 imagemagick libgtk-3-dev
+          sudo apt install -y libfuse2 imagemagick libgtk-3-dev libnotify4 libsdl2-2.0-0
           wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
           chmod +x appimagetool
       - name: Install dependencies
@@ -124,6 +124,10 @@ jobs:
         run: |
           source .venv/bin/activate
           pyinstaller --noconfirm --clean sriracha-linux.spec
+      - name: List bundled files in PyInstaller dist directory
+        run: |
+          echo "PyInstaller bundled files:"
+          find dist/sriracha -type f -exec ls -lh {} +
       - name: Package as AppImage
         run: |
           mkdir packaging/linux/appimage/Sriracha.AppDir/opt
@@ -135,5 +139,99 @@ jobs:
       - name: Upload AppImage Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sriracha-Linux
+          name: Sriracha-Ubuntu-22-04
           path: "Sriracha*.AppImage"
+
+  test-ubuntu-24-04-appimage:
+    runs-on: ubuntu-24.04
+    needs: build-ubuntu-22-04
+    if: |
+      github.event.head_commit.message == null ||
+      (!contains(github.event.head_commit.message, '[no-ci]') && (
+        contains(github.event.head_commit.message, '[build-ubuntu-22-04]') ||
+        !contains(github.event.head_commit.message, '[build-')
+      ))
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download AppImage Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Sriracha-Ubuntu-22-04
+          path: ./appimage-artifact
+
+      - name: Find AppImage file
+        id: find_appimage
+        run: |
+          APPIMAGE=$(find ./appimage-artifact -name '*.AppImage' | head -n1)
+          if [ -z "$APPIMAGE" ]; then
+            echo "No AppImage found!" >&2
+            exit 1
+          fi
+          echo "appimage_path=$APPIMAGE" >> $GITHUB_OUTPUT
+
+      - name: Install required packages
+        run: |
+          set -eu
+          sudo apt-get update
+          # Install dependencies for running the AppImage
+          sudo apt-get install -y \
+            libfuse2 \
+            libnotify4 \
+            libsdl2-2.0-0
+          # Install additional packages for testing the AppImage in CI
+          sudo apt-get install -y \
+            at-spi2-core \
+            xdotool \
+            xkb-data \
+            x11-apps \
+            xvfb \
+            imagemagick \
+            fluxbox
+
+      - name: Make AppImage executable
+        run: chmod +x "${{ steps.find_appimage.outputs.appimage_path }}"
+
+      - name: Run AppImage in Xvfb, drive UI, and capture screenshots
+        run: |
+          set -x
+          set +eu
+          export DISPLAY=:99
+          export KBD_DFAULT_LAYOUT=us
+          Xvfb :99 -screen 0 1280x800x24 -xkbdir /usr/share/X11/xkb &
+          XVFB_PID=$!
+          sleep 2
+          # Start window manager (fluxbox or openbox)
+          fluxbox &
+          WM_PID=$!
+          sleep 2
+          "${{ steps.find_appimage.outputs.appimage_path }}" experiments/demo.mbox &
+          APP_PID=$!
+          # Wait for the window to appear
+          for i in {1..10}; do
+            WIN_ID=$(xdotool search --onlyvisible --name Sriracha | head -n1 || true)
+            if [ -n "$WIN_ID" ]; then break; fi
+            sleep 1
+          done
+          if [ -n "$WIN_ID" ]; then
+            # Type "receipt", press Return, then Tab twice, then Down arrow once
+            xdotool windowactivate --sync $WIN_ID type --delay 100 "receipt" || true
+            xdotool windowactivate --sync $WIN_ID key Return || true
+          else
+            echo "Sriracha window not found for automation" >&2
+          fi
+          sleep 5
+          xwd -root -display :99 -out sriracha.xwd
+          convert sriracha.xwd sriracha.png
+          kill $APP_PID || true
+          # Wait a moment before next run
+          sleep 2
+          kill $WM_PID || true
+          kill $XVFB_PID || true
+        shell: bash
+
+      - name: Upload screenshot artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sriracha-Ubuntu-24-04-Screenshots
+          path: |
+            sriracha.png
