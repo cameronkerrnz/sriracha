@@ -138,74 +138,20 @@ jobs:
           name: Sriracha-Ubuntu-22-04
           path: "Sriracha*.AppImage"
 
-  build-ubuntu-24-04:
-    runs-on: ubuntu-24.04
-    if: |
-      github.event.head_commit.message == null ||
-      (!contains(github.event.head_commit.message, '[no-ci]') && (
-        contains(github.event.head_commit.message, '[build-ubuntu-24-04]') ||
-        !contains(github.event.head_commit.message, '[build-')
-      ))
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - name: Install AppImage tools
-        run: |
-          sudo apt update
-          sudo apt install -y libfuse2 imagemagick libgtk-3-dev
-          wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
-          chmod +x appimagetool
-      - name: Install dependencies
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install -U \
-            -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-24.04 \
-            wxPython
-          pip install -r requirements.txt
-      - name: Create application icon
-        run: |
-          convert packaging/sriracha.png -resize 256x256 packaging/linux/appimage/sriracha.png
-      - name: Bake version and commit into Python module
-        run: |
-          echo "# This file is auto-generated at build time. Do not edit manually." > src/_baked_version.py
-          echo "VERSION=\"$(cat VERSION)\"" >> src/_baked_version.py
-          echo "GIT_COMMIT=\"$(git rev-parse --short HEAD)\"" >> src/_baked_version.py
-      - name: Build with PyInstaller
-        run: |
-          source .venv/bin/activate
-          pyinstaller --noconfirm --clean sriracha-linux.spec
-      - name: Package as AppImage
-        run: |
-          mkdir packaging/linux/appimage/Sriracha.AppDir/opt
-          mv dist/sriracha packaging/linux/appimage/Sriracha.AppDir/opt
-          convert packaging/appicon.png -resize 256x256 packaging/linux/appimage/Sriracha.AppDir/sriracha.png
-          (cd packaging/linux/appimage/Sriracha.AppDir && ln -s opt/sriracha/sriracha AppRun)
-          (cd packaging/linux/appimage/Sriracha.AppDir && ln -s usr/share/applications/io.github.cameronkerrnz.sriracha.desktop .)
-          ./appimagetool packaging/linux/appimage/Sriracha.AppDir
-      - name: Upload AppImage Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Sriracha-Ubuntu-24-04
-          path: "Sriracha*.AppImage"
-
   test-ubuntu-24-04-appimage:
     runs-on: ubuntu-24.04
-    needs: build-ubuntu-24-04
+    needs: build-ubuntu-22-04
     if: |
       github.event.head_commit.message == null ||
       (!contains(github.event.head_commit.message, '[no-ci]') && (
-        contains(github.event.head_commit.message, '[build-ubuntu-24-04]') ||
+        contains(github.event.head_commit.message, '[build-ubuntu-22-04]') ||
         !contains(github.event.head_commit.message, '[build-')
       ))
     steps:
       - name: Download AppImage Artifact
         uses: actions/download-artifact@v4
         with:
-          name: Sriracha-Ubuntu-24-04
+          name: Sriracha-Ubuntu-22-04
           path: ./appimage-artifact
 
       - name: Find AppImage file
