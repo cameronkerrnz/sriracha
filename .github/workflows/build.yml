@@ -204,30 +204,27 @@ jobs:
           fluxbox &
           WM_PID=$!
           sleep 2
-          for SCALE in 1 2; do
-            export GDK_SCALE=$SCALE
-            "${{ steps.find_appimage.outputs.appimage_path }}" experiments/demo.mbox &
-            APP_PID=$!
-            # Wait for the window to appear
-            for i in {1..10}; do
-              WIN_ID=$(xdotool search --onlyvisible --name Sriracha | head -n1 || true)
-              if [ -n "$WIN_ID" ]; then break; fi
-              sleep 1
-            done
-            if [ -n "$WIN_ID" ]; then
-              # Type "receipt", press Return, then Tab twice, then Down arrow once
-              xdotool windowactivate --sync $WIN_ID type --delay 100 "receipt" || true
-              xdotool windowactivate --sync $WIN_ID key Return || true
-            else
-              echo "Sriracha window not found for automation (GDK_SCALE=$SCALE)" >&2
-            fi
-            sleep 5
-            xwd -root -display :99 -out sriracha-scale${SCALE}.xwd
-            convert sriracha-scale${SCALE}.xwd sriracha-scale${SCALE}.png
-            kill $APP_PID || true
-            # Wait a moment before next run
-            sleep 2
+          "${{ steps.find_appimage.outputs.appimage_path }}" experiments/demo.mbox &
+          APP_PID=$!
+          # Wait for the window to appear
+          for i in {1..10}; do
+            WIN_ID=$(xdotool search --onlyvisible --name Sriracha | head -n1 || true)
+            if [ -n "$WIN_ID" ]; then break; fi
+            sleep 1
           done
+          if [ -n "$WIN_ID" ]; then
+            # Type "receipt", press Return, then Tab twice, then Down arrow once
+            xdotool windowactivate --sync $WIN_ID type --delay 100 "receipt" || true
+            xdotool windowactivate --sync $WIN_ID key Return || true
+          else
+            echo "Sriracha window not found for automation" >&2
+          fi
+          sleep 5
+          xwd -root -display :99 -out sriracha.xwd
+          convert sriracha.xwd sriracha.png
+          kill $APP_PID || true
+          # Wait a moment before next run
+          sleep 2
           kill $WM_PID || true
           kill $XVFB_PID || true
         shell: bash
@@ -237,5 +234,4 @@ jobs:
         with:
           name: Sriracha-Ubuntu-24-04-Screenshots
           path: |
-            sriracha-scale1.png
-            sriracha-scale2.png
+            sriracha.png
