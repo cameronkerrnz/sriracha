@@ -237,5 +237,5 @@ jobs:
         with:
           name: Sriracha-Ubuntu-24-04-Screenshots
           path: |
-            sriracha-gdk1.png
-            sriracha-gdk2.png
+            sriracha-scale1.png
+            sriracha-scale2.png
