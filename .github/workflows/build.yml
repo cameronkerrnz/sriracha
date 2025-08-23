@@ -223,7 +223,7 @@ jobs:
             fi
             sleep 5
             xwd -root -display :99 -out sriracha-scale${SCALE}.xwd
-            convert sriracha-gdk${SCALE}.xwd sriracha-scale${SCALE}.png
+            convert sriracha-scale${SCALE}.xwd sriracha-scale${SCALE}.png
             kill $APP_PID || true
             # Wait a moment before next run
             sleep 2
